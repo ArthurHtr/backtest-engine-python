@@ -2,7 +2,7 @@ from simple_broker.models import Trade, PortfolioSnapshot, Position, PositionSid
 
 class PortfolioState:
     """
-    Manages the internal state of the portfolio.
+    Manages the internal state of the portfolio, supporting long and short positions.
     """
     def __init__(self, initial_cash: float):
         self.cash = initial_cash
@@ -13,26 +13,22 @@ class PortfolioState:
         Updates the portfolio state based on a trade.
         """
         if trade.symbol not in self.positions:
+            side = PositionSide.LONG if trade.quantity > 0 else PositionSide.SHORT
             self.positions[trade.symbol] = Position(
                 symbol=trade.symbol,
-                side=PositionSide.LONG if trade.quantity > 0 else PositionSide.SHORT,
+                side=side,
                 quantity=0,
                 entry_price=0.0
             )
 
         position = self.positions[trade.symbol]
-        total_quantity = position.quantity + trade.quantity
+        position.update(trade_price=trade.price, trade_quantity=trade.quantity)
 
-        if total_quantity == 0:
-            position.realized_pnl += (trade.price - position.entry_price) * position.quantity
+        # Remove position if fully closed
+        if position.quantity == 0:
             del self.positions[trade.symbol]
-        else:
-            avg_price = (
-                (position.quantity * position.entry_price + trade.quantity * trade.price) / total_quantity
-            )
-            position.quantity = total_quantity
-            position.entry_price = avg_price
 
+        # Update cash
         self.cash -= trade.quantity * trade.price + trade.fee
 
     def build_snapshot(self, price_by_symbol: dict, timestamp: str) -> PortfolioSnapshot:
@@ -44,7 +40,11 @@ class PortfolioState:
 
         for symbol, position in self.positions.items():
             current_price = price_by_symbol.get(symbol, position.entry_price)
-            unrealized_pnl = (current_price - position.entry_price) * position.quantity
+            unrealized_pnl = (
+                (current_price - position.entry_price) * position.quantity
+                if position.side == PositionSide.LONG
+                else (position.entry_price - current_price) * abs(position.quantity)
+            )
             equity += unrealized_pnl
             positions_snapshot.append(Position(
                 symbol=position.symbol,

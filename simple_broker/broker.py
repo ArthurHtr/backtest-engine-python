@@ -1,9 +1,9 @@
-from simple_broker.models import Candle, OrderIntent, Trade
+from simple_broker.models import Candle, OrderIntent, Trade, Side
 from simple_broker.portfolio import PortfolioState
 
 class BacktestBroker:
     """
-    Simulates a broker for backtesting.
+    Simulates a broker for backtesting, supporting long and short positions.
     """
     def __init__(self, initial_cash: float, fee_rate: float):
         self.portfolio = PortfolioState(initial_cash)
@@ -23,9 +23,10 @@ class BacktestBroker:
             if intent.order_type == "MARKET":
                 price = candle.close
                 fee = abs(intent.quantity * price) * self.fee_rate
+                trade_quantity = intent.quantity if intent.side == Side.BUY else -intent.quantity
                 trade = Trade(
                     symbol=intent.symbol,
-                    quantity=intent.quantity,
+                    quantity=trade_quantity,
                     price=price,
                     fee=fee,
                     timestamp=candle.timestamp

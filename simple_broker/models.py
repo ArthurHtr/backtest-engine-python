@@ -56,14 +56,48 @@ class Trade:
 
 class Position:
     """
-    Represents an open position.
+    Represents an open position, supporting both long and short sides.
     """
     def __init__(self, symbol: str, side: PositionSide, quantity: float, entry_price: float, realized_pnl: float = 0.0):
         self.symbol = symbol
         self.side = side
         self.quantity = quantity
-        self.entry_price = entry_price
+        self.entry_price = abs(entry_price)  # Ensure entry_price is always positive
         self.realized_pnl = realized_pnl
+
+    def update(self, trade_price: float, trade_quantity: float):
+        """
+        Updates the position based on a trade.
+        """
+        if self.side == PositionSide.LONG:
+            if trade_quantity > 0:  # Adding to the position
+                total_quantity = self.quantity + trade_quantity
+                self.entry_price = (
+                    (self.quantity * self.entry_price + trade_quantity * trade_price) / total_quantity
+                )
+                self.quantity = total_quantity
+            else:  # Reducing the position
+                realized = (trade_price - self.entry_price) * abs(trade_quantity)
+                self.realized_pnl += realized
+                self.quantity += trade_quantity
+
+        elif self.side == PositionSide.SHORT:
+            if trade_quantity < 0:  # Adding to the position
+                total_quantity = self.quantity + trade_quantity
+                self.entry_price = abs(
+                    (self.quantity * self.entry_price + abs(trade_quantity) * trade_price) / total_quantity
+                )
+                self.quantity = total_quantity
+            else:  # Reducing the position
+                realized = (self.entry_price - trade_price) * abs(trade_quantity)
+                self.realized_pnl += realized
+                self.quantity += trade_quantity
+
+    def __repr__(self):
+        return (
+            f"Position(Symbol: {self.symbol}, Side: {self.side}, Quantity: {self.quantity}, "
+            f"Entry Price: {self.entry_price}, Realized PnL: {self.realized_pnl})"
+        )
 
 class PortfolioSnapshot:
     """
