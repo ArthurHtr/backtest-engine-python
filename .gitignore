@@ -1,2 +1,11 @@
 # Ignore Python virtual environment
 venv/
+
+#  ignore les __pycache__/
+__pycache__/
+
+#ignore les __init__.py
+__init__.py
+
+#ignore backtest_analysis.txt
+backtest_analysis.txt

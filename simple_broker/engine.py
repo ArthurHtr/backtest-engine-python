@@ -5,6 +5,8 @@ from simple_broker.broker import BacktestBroker
 from simple_broker.strategy import BaseStrategy, StrategyContext
 
 from market_sdk.data_provider import DataProvider
+from tqdm import tqdm
+from collections import defaultdict
 
 class BacktestEngine:
     """
@@ -19,46 +21,62 @@ class BacktestEngine:
         """
         Executes the backtest loop.
         Tracks order intents, executions, rejections, and detailed candle-by-candle data.
+        Optimised: no scan O(N) des listes de candles à chaque timestamp.
         """
-        snapshots = []
-        self.snapshots = snapshots  # Store snapshots for export
-        self.order_details = []  # Track order intents and execution details
-        self.candle_logs = []  # Detailed logs for each candle
+        snapshots: list[PortfolioSnapshot] = []
+        self.snapshots = snapshots
 
-        # Align candles by timestamp
-        all_timestamps = {c.timestamp for candles in candles_by_symbol.values() for c in candles}
-        timestamps = sorted(all_timestamps)
+        self.order_details = []
+        candle_logs: list[dict] = []
+        self.candle_logs = candle_logs
 
-        for timestamp in timestamps:
-            
-            current_candles = {}
+        # 1) Pré-indexation : timestamp (str) -> {symbol -> Candle}
+        candles_by_timestamp: dict[str, dict[str, Candle]] = defaultdict(dict)
 
-            for symbol, candles in candles_by_symbol.items():
-                matching_candles = [candle for candle in candles if candle.timestamp == timestamp]
-                if matching_candles:
-                    current_candles[symbol] = matching_candles[0]
+        for symbol, candles in candles_by_symbol.items():
+            for candle in candles:
+                ts = candle.timestamp  # c'est une str, ex: "2025-11-30T12:34:00"
+                candles_by_timestamp[ts][symbol] = candle
 
+        # 2) Liste triée des timestamps (ordre lexicographique OK avec ISO-8601)
+        timestamps = sorted(candles_by_timestamp.keys())
+
+        # Micro-optimisations : alias locaux
+        broker = self.broker
+        strategy = self.strategy
+        append_snapshot = snapshots.append
+        append_log = candle_logs.append
+
+        # 3) Boucle principale
+        for ts in tqdm(timestamps):
+            current_candles = candles_by_timestamp[ts]
             if not current_candles:
                 continue
 
-            snapshot_before = self.broker.get_snapshot(current_candles)
+            snapshot_before = broker.get_snapshot(current_candles)
 
-            context = StrategyContext(candles=current_candles, portfolio_snapshot=snapshot_before)
+            context = StrategyContext(
+                candles=current_candles,
+                portfolio_snapshot=snapshot_before,
+            )
 
-            order_intents = self.strategy.on_bar(context)
+            order_intents = strategy.on_bar(context)
 
-            snapshot_after, execution_details = self.broker.process_bars(current_candles, order_intents)
+            snapshot_after, execution_details = broker.process_bars(
+                current_candles,
+                order_intents,
+            )
 
-            # Log detailed candle data
-            self.candle_logs.append({
+            append_log({
+                "timestamp": ts,
                 "candles": current_candles,
                 "snapshot_before": snapshot_before,
                 "snapshot_after": snapshot_after,
                 "order_intents": order_intents,
-                "execution_details": execution_details
+                "execution_details": execution_details,
             })
 
-            snapshots.append(snapshot_after)
+            append_snapshot(snapshot_after)
 
         return snapshots
     

@@ -9,7 +9,7 @@ class BuyAndHoldStrategy(BaseStrategy):
     """
     def __init__(self):
         self.first_timestamp = "2025-11-01T00:00:00"
-        self.last_timestamp = "2025-11-07T00:00:00"
+        self.last_timestamp = "2025-11-30T00:00:00"
 
     def on_bar(self, context: StrategyContext):
         order_intents = []
