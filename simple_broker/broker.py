@@ -1,4 +1,4 @@
-from simple_broker.models import Candle, OrderIntent, Trade, Side
+from simple_broker.models import Candle, OrderIntent, Trade, Side, PositionSide
 from simple_broker.portfolio import PortfolioState
 
 class BacktestBroker:
@@ -25,6 +25,7 @@ class BacktestBroker:
                 fee = abs(intent.quantity * price) * self.fee_rate
                 trade_quantity = intent.quantity if intent.side == Side.BUY else -intent.quantity
                 trade = Trade(
+                    order_id=intent.order_id,
                     symbol=intent.symbol,
                     quantity=trade_quantity,
                     price=price,

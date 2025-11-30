@@ -1,4 +1,5 @@
 from enum import Enum
+import uuid
 
 class Side(Enum):
     BUY = "BUY"

@@ -14,17 +14,17 @@ class MomentumStrategy(BaseStrategy):
         if self.previous_close is not None:
             # Acheter si le prix actuel est supérieur au prix précédent (momentum haussier)
             if context.candle.close > self.previous_close:
-                orders.append(OrderIntent(symbol=context.symbol, side=Side.BUY, quantity=1))
+                orders.append(OrderIntent(symbol=context.symbol, side=Side.BUY, quantity=10))
             # Vendre si le prix actuel est inférieur au prix précédent (momentum baissier)
             elif context.candle.close < self.previous_close:
-                orders.append(OrderIntent(symbol=context.symbol, side=Side.SELL, quantity=1))
+                orders.append(OrderIntent(symbol=context.symbol, side=Side.SELL, quantity=10))
         self.previous_close = context.candle.close
         return orders
 
 # Générer des données de marché (OHLCV) avec du hasard
 candles = []
 base_price = 100
-for i in range(300):
+for i in range(1000):
     open_price = base_price + random.uniform(-5, 5)
     high_price = open_price + random.uniform(0, 10)
     low_price = open_price - random.uniform(0, 10)
