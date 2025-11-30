@@ -1,0 +1,37 @@
+from simple_broker.strategy import BaseStrategy, StrategyContext
+from simple_broker.models.order_intent import OrderIntent
+from simple_broker.models.enums import Side
+
+class BuyAndHoldStrategy(BaseStrategy):
+    """
+    A simple Buy and Hold strategy that buys a fixed quantity of each symbol at the first timestamp
+    and sells all positions at the last timestamp.
+    """
+    def __init__(self):
+        self.first_timestamp = "2025-11-01T00:00:00"
+        self.last_timestamp = "2025-11-07T00:00:00"
+
+    def on_bar(self, context: StrategyContext):
+        order_intents = []
+
+        timestamp = context.candles[next(iter(context.candles))].timestamp
+
+        # Place buy orders only at the first timestamp
+        if timestamp == self.first_timestamp:
+            for symbol in context.candles.keys():
+                order_intents.append(OrderIntent(
+                    symbol=symbol,
+                    side=Side.BUY,
+                    quantity=100  # Fixed quantity to buy
+                ))
+
+        # Place sell orders only at the last timestamp
+        if timestamp == self.last_timestamp:
+            for position in context.portfolio_snapshot.positions:
+                order_intents.append(OrderIntent(
+                    symbol=position.symbol,
+                    side=Side.SELL,
+                    quantity=position.quantity  # Sell the entire position
+                ))
+
+        return order_intents

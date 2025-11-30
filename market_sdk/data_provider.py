@@ -1,5 +1,5 @@
 import random
-from simple_broker.models import Candle
+from simple_broker.models.candle import Candle
 from datetime import datetime, timedelta
 
 class DataProvider:

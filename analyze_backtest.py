@@ -1,4 +1,4 @@
-from simple_broker.models import Candle
+from simple_broker.models.candle import Candle
 
 # Fonction pour analyser les résultats du backtest
 # Inclut les détails des ordres et des rejets

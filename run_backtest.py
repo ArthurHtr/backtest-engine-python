@@ -2,7 +2,7 @@ from simple_broker.broker import BacktestBroker
 from simple_broker.engine import BacktestEngine
 from market_sdk.data_provider import DataProvider
 from market_sdk.exporter import Exporter
-from alternating_strategy import AlternatingStrategy
+from buy_and_hold_strategy import BuyAndHoldStrategy
 
 
 # Initialize SDK components
@@ -17,18 +17,17 @@ candles_by_symbol = data_provider.get_multiple_candles(symbols=symbols, start="2
 if not any(candles_by_symbol.values()):
     raise ValueError("No candle data fetched for the provided symbols. Please check the DataProvider or input parameters.")
 
+
+
 # Initialize components
-initial_cash = 10000
+initial_cash = 20000
 fee_rate = 0.001
 broker = BacktestBroker(initial_cash=initial_cash, fee_rate=fee_rate)
-strategy = AlternatingStrategy()
+strategy = BuyAndHoldStrategy()
 engine = BacktestEngine(broker=broker, strategy=strategy, data_provider=data_provider)
 
 # Run the backtest for multiple symbols
-snapshots = engine.run_multi_symbol(candles_by_symbol)
-
-# Export results
-engine.export_results(exporter=exporter)
+snapshots = engine.run(candles_by_symbol)
 
 # Display the results
 for snapshot in snapshots:
