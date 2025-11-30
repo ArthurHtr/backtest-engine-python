@@ -26,11 +26,10 @@ class DataProvider:
             candles = []
             current_date = start_date
             base_price = 80
-            volatility = 5
 
             while current_date <= end_date:
                 # Simulate subtle upward market trend with moderate volatility
-                base_price += random.uniform(-0.2, 0.5)  # Small random drift
+                base_price += random.uniform(-0.3, 0.5)  # Small random drift
 
                 open_price = base_price + random.uniform(-1, 1)
                 close_price = open_price + random.uniform(-1, 1)

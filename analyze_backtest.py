@@ -30,12 +30,6 @@ def analyze_backtest(candle_logs):
             for symbol, details in snapshot_before.summarize_positions().items():
                 file.write(f"    {symbol}: Side={details['side']}, Quantity={details['quantity']}, Entry Price={details['entry_price']:.2f}, Realized PnL={details['realized_pnl']:.2f}\n")
 
-            file.write("Portfolio After:\n")
-            file.write(f"  Cash: {snapshot_after.cash:.2f}, Equity: {snapshot_after.equity:.2f}\n")
-            file.write("  Positions:\n")
-            for symbol, details in snapshot_after.summarize_positions().items():
-                file.write(f"    {symbol}: Side={details['side']}, Quantity={details['quantity']}, Entry Price={details['entry_price']:.2f}, Realized PnL={details['realized_pnl']:.2f}\n")
-
             file.write("Order Intents:\n")
             for intent in order_intents:
                 file.write(f"  - Order ID={intent.order_id}, Symbol={intent.symbol}, Side={intent.side}, Quantity={intent.quantity}, Type={intent.order_type}, Limit Price={intent.limit_price}\n")
@@ -49,6 +43,12 @@ def analyze_backtest(candle_logs):
                 file.write(f"  - Order ID={order_id}, Status={status}, Reason={reason}\n")
                 if trade:
                     file.write(f"    Trade ID={trade.trade_id}, Quantity={trade.quantity}, Price={trade.price}, Fee={trade.fee}, Timestamp={trade.timestamp}\n")
+
+            file.write("Portfolio After:\n")
+            file.write(f"  Cash: {snapshot_after.cash:.2f}, Equity: {snapshot_after.equity:.2f}\n")
+            file.write("  Positions:\n")
+            for symbol, details in snapshot_after.summarize_positions().items():
+                file.write(f"    {symbol}: Side={details['side']}, Quantity={details['quantity']}, Entry Price={details['entry_price']:.2f}, Realized PnL={details['realized_pnl']:.2f}\n")
 
             file.write("\n")
 
