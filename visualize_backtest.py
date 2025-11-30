@@ -7,23 +7,22 @@ def visualize_backtest(candles, snapshots):
     close_prices = [candle.close for candle in candles]
     equity = [snapshot.equity for snapshot in snapshots]
 
-    fig, ax1 = plt.subplots()
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10, 8))
 
-    # Tracer les prix de clôture
-    ax1.set_xlabel('Time')
-    ax1.set_ylabel('Close Price', color='tab:blue')
-    ax1.plot(timestamps, close_prices, label='Close Price', color='tab:blue')
-    ax1.tick_params(axis='y', labelcolor='tab:blue')
+    # Sous-graphe pour les prix de clôture
+    ax1.set_title('Prix de Clôture')
+    ax1.plot(timestamps, close_prices, label='Prix de Clôture', color='tab:blue')
+    ax1.set_ylabel('Prix de Clôture')
+    ax1.legend()
 
-    # Ajouter une deuxième échelle pour l'équité
-    ax2 = ax1.twinx()
-    ax2.set_ylabel('Equity', color='tab:green')
-    ax2.plot(timestamps, equity, label='Equity', color='tab:green')
-    ax2.tick_params(axis='y', labelcolor='tab:green')
+    # Sous-graphe pour l'équité
+    ax2.set_title('Équité')
+    ax2.plot(timestamps, equity, label='Équité', color='tab:green')
+    ax2.set_ylabel('Équité')
+    ax2.set_xlabel('Temps')
+    ax2.legend()
 
-    # Ajouter une légende
-    fig.tight_layout()
-    plt.title('Backtest Results')
+    plt.tight_layout()
     plt.show()
 
 # Exemple d'utilisation
