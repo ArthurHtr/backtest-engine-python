@@ -17,10 +17,24 @@ class BuyAndHoldStrategy(BaseStrategy):
         # Acheter 100 unités de l'actif sur la première bougie
         return [OrderIntent(symbol=context.symbol, side=Side.BUY, quantity=100)]
 
+    def on_end(self, context: StrategyContext):
+        """
+        Called at the end of the backtest to liquidate all positions.
+        """
+        order_intents = []
+        for position in context.portfolio_snapshot.positions:
+            if position.quantity > 0:
+                order_intents.append(OrderIntent(
+                    symbol=position.symbol,
+                    side=Side.SELL,
+                    quantity=position.quantity
+                ))
+        return order_intents
+
 # Générer des données de marché (OHLCV) avec du hasard
 candles = []
 base_price = 100
-volatility = 2  # Simule la volatilité du marché
+volatility = 5  # Simule la volatilité du marché
 trend = 0.1  # Simule une légère tendance à la hausse
 for i in range(1000):
     open_price = base_price + random.uniform(-volatility, volatility)

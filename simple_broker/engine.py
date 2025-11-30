@@ -36,4 +36,14 @@ class BacktestEngine:
             # Store the snapshot
             snapshots.append(snapshot_after)
 
+        # Call the strategy's on_end method at the end of the backtest
+        final_context = StrategyContext(
+            candle=candles[-1],
+            symbol=candles[-1].symbol,
+            portfolio_snapshot=self.broker.get_snapshot(candles[-1])
+        )
+        final_order_intents = self.strategy.on_end(final_context)
+        final_snapshot = self.broker.process_bar(candles[-1], final_order_intents)
+        snapshots.append(final_snapshot)
+
         return snapshots
