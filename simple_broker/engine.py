@@ -1,49 +1,81 @@
 from simple_broker.models import Candle, PortfolioSnapshot
 from simple_broker.broker import BacktestBroker
 from simple_broker.strategy import BaseStrategy, StrategyContext
+from market_sdk.data_provider import DataProvider
+from market_sdk.exporter import Exporter
 
 class BacktestEngine:
     """
     Runs the backtest loop.
     """
-    def __init__(self, broker: BacktestBroker, strategy: BaseStrategy):
+    def __init__(self, broker: BacktestBroker, strategy: BaseStrategy, data_provider: DataProvider):
         self.broker = broker
         self.strategy = strategy
+        self.data_provider = data_provider
 
     def run(self, candles: list[Candle]) -> list[PortfolioSnapshot]:
         """
         Executes the backtest loop.
+        Tracks order intents, executions, rejections, and detailed candle-by-candle data.
         """
         snapshots = []
+        self.snapshots = snapshots  # Store snapshots for export
+        self.order_details = []  # Track order intents and execution details
+        self.candle_logs = []  # Detailed logs for each candle
 
         for candle in candles:
-            # Get portfolio snapshot before strategy decision
             snapshot_before = self.broker.get_snapshot(candle)
 
-            # Create strategy context
             context = StrategyContext(
                 candle=candle,
                 symbol=candle.symbol,
                 portfolio_snapshot=snapshot_before
             )
 
-            # Get order intents from strategy
             order_intents = self.strategy.on_bar(context)
 
-            # Process orders and get portfolio snapshot after execution
-            snapshot_after = self.broker.process_bar(candle, order_intents)
+            snapshot_after, execution_details = self.broker.process_bar(candle, order_intents)
 
-            # Store the snapshot
+            # Log detailed candle data
+            self.candle_logs.append({
+                "candle": candle,
+                "snapshot_before": snapshot_before,
+                "snapshot_after": snapshot_after,
+                "order_intents": order_intents,
+                "execution_details": execution_details
+            })
+
             snapshots.append(snapshot_after)
 
-        # Call the strategy's on_end method at the end of the backtest
         final_context = StrategyContext(
             candle=candles[-1],
             symbol=candles[-1].symbol,
             portfolio_snapshot=self.broker.get_snapshot(candles[-1])
         )
         final_order_intents = self.strategy.on_end(final_context)
-        final_snapshot = self.broker.process_bar(candles[-1], final_order_intents)
+        final_snapshot, final_execution_details = self.broker.process_bar(candles[-1], final_order_intents)
         snapshots.append(final_snapshot)
 
+        # Log final candle data
+        self.candle_logs.append({
+            "candle": candles[-1],
+            "snapshot_before": snapshot_before,
+            "snapshot_after": final_snapshot,
+            "order_intents": final_order_intents,
+            "execution_details": final_execution_details
+        })
+
         return snapshots
+
+    def export_results(self, exporter: Exporter):
+        """
+        Export backtest results using the provided exporter.
+        Includes detailed candle-by-candle logs.
+        """
+        results = {
+            "snapshots": self.snapshots,
+            "strategy": self.strategy.__class__.__name__,
+            "orders": self.order_details,
+            "candle_logs": self.candle_logs
+        }
+        exporter.export_to_db(results)

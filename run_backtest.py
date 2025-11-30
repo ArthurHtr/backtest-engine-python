@@ -3,6 +3,10 @@ from simple_broker.models import Candle, OrderIntent, Side
 from simple_broker.broker import BacktestBroker
 from simple_broker.strategy import BaseStrategy, StrategyContext
 from simple_broker.engine import BacktestEngine
+from market_sdk.data_provider import DataProvider
+from market_sdk.exporter import Exporter
+import matplotlib.pyplot as plt
+from simple_broker.moving_average_strategy import AlternatingStrategy
 
 # Exemple de stratégie d'achat et de conservation
 class BuyAndHoldStrategy(BaseStrategy):
@@ -31,40 +35,29 @@ class BuyAndHoldStrategy(BaseStrategy):
                 ))
         return order_intents
 
-# Générer des données de marché (OHLCV) avec du hasard
-candles = []
-base_price = 100
-volatility = 5  # Simule la volatilité du marché
-trend = 0.1  # Simule une légère tendance à la hausse
-for i in range(1000):
-    open_price = base_price + random.uniform(-volatility, volatility)
-    high_price = open_price + random.uniform(0, volatility * 2)
-    low_price = open_price - random.uniform(0, volatility * 2)
-    close_price = low_price + random.uniform(0, high_price - low_price)
-    volume = 1000 + random.randint(-200, 200)
+# Initialize SDK components
+data_provider = DataProvider(api_key="your_api_key")
+exporter = Exporter(db_config={"host": "localhost", "port": 5432})
 
-    # Simuler les tendances du marché
-    base_price += trend + random.uniform(-volatility / 2, volatility / 2)
+# Fetch market data using DataProvider
+candles = data_provider.get_candles(symbol="AAPL", start="2025-11-01", end="2025-11-30")
 
-    candles.append(Candle(
-        symbol="AAPL",
-        timestamp=f"2025-11-29T10:{str(i).zfill(2)}:00Z",
-        open=open_price,
-        high=high_price,
-        low=low_price,
-        close=close_price,
-        volume=volume
-    ))
+# Validate fetched candles
+if not candles:
+    raise ValueError("No candle data fetched. Please check the DataProvider or input parameters.")
 
 # Initialiser les composants
-initial_cash = 100000
+initial_cash = 10000
 fee_rate = 0.001
 broker = BacktestBroker(initial_cash=initial_cash, fee_rate=fee_rate)
-strategy = BuyAndHoldStrategy()
-engine = BacktestEngine(broker=broker, strategy=strategy)
+strategy = AlternatingStrategy()
+engine = BacktestEngine(broker=broker, strategy=strategy, data_provider=data_provider)
 
 # Lancer le backtest
 snapshots = engine.run(candles)
+
+# Export results
+engine.export_results(exporter=exporter)
 
 # Afficher les résultats
 for snapshot in snapshots:
