@@ -43,6 +43,7 @@ class OrderIntent:
         self.quantity = quantity
         self.order_type = order_type
         self.limit_price = limit_price
+        self.order_id = str(uuid.uuid4())  # Assign a unique order ID
 
 class Trade:
     """
@@ -54,6 +55,7 @@ class Trade:
         self.price = price
         self.fee = fee
         self.timestamp = timestamp
+        self.trade_id = str(uuid.uuid4())  # Assign a unique trade ID
 
 class Position:
     """

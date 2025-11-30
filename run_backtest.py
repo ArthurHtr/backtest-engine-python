@@ -11,20 +11,24 @@ import matplotlib.pyplot as plt
 class SimpleAlternatingStrategy(BaseStrategy):
     def __init__(self):
         self.last_actions = {}  # Track the last action for each symbol
+        self.candle_count = 0  # Track the number of candles processed
 
     def on_bar(self, context: StrategyContext):
         """
-        Alternates between buying and selling a fixed quantity for each symbol.
+        Alternates between buying and selling every 10 candles for each symbol.
         """
+        self.candle_count += 1
         order_intents = []
-        for symbol, candle in context.candles.items():
-            last_action = self.last_actions.get(symbol)
-            if last_action == "BUY":
-                self.last_actions[symbol] = "SELL"
-                order_intents.append(OrderIntent(symbol=symbol, side=Side.SELL, quantity=1))
-            else:
-                self.last_actions[symbol] = "BUY"
-                order_intents.append(OrderIntent(symbol=symbol, side=Side.BUY, quantity=1))
+
+        if self.candle_count % 10 == 0:  # Perform actions every 10 candles
+            for symbol, candle in context.candles.items():
+                last_action = self.last_actions.get(symbol)
+                if last_action == "BUY":
+                    self.last_actions[symbol] = "SELL"
+                    order_intents.append(OrderIntent(symbol=symbol, side=Side.SELL, quantity=1))
+                else:
+                    self.last_actions[symbol] = "BUY"
+                    order_intents.append(OrderIntent(symbol=symbol, side=Side.BUY, quantity=1))
         return order_intents
 
     def on_end(self, context: StrategyContext):
@@ -54,7 +58,7 @@ if not any(candles_by_symbol.values()):
     raise ValueError("No candle data fetched for the provided symbols. Please check the DataProvider or input parameters.")
 
 # Initialize components
-initial_cash = 10000
+initial_cash = 1000
 fee_rate = 0.001
 broker = BacktestBroker(initial_cash=initial_cash, fee_rate=fee_rate)
 strategy = SimpleAlternatingStrategy()

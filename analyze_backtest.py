@@ -29,16 +29,17 @@ def analyze_backtest(candle_logs):
 
             file.write("Order Intents:\n")
             for intent in order_intents:
-                file.write(f"  - Symbol={intent.symbol}, Side={intent.side}, Quantity={intent.quantity}, Type={intent.order_type}, Limit Price={intent.limit_price}\n")
+                file.write(f"  - Order ID={intent.order_id}, Symbol={intent.symbol}, Side={intent.side}, Quantity={intent.quantity}, Type={intent.order_type}, Limit Price={intent.limit_price}\n")
 
             file.write("Execution Details:\n")
             for detail in execution_details:
                 status = detail["status"]
                 reason = detail.get("reason", "N/A")
                 trade = detail.get("trade")
-                file.write(f"  - Intent: Symbol={detail['intent'].symbol}, Status={status}, Reason={reason}\n")
+                order_id = detail["intent"].order_id  # Retrieve order ID
+                file.write(f"  - Order ID={order_id}, Status={status}, Reason={reason}\n")
                 if trade:
-                    file.write(f"    Trade: Quantity={trade.quantity}, Price={trade.price}, Fee={trade.fee}, Timestamp={trade.timestamp}\n")
+                    file.write(f"    Trade ID={trade.trade_id}, Quantity={trade.quantity}, Price={trade.price}, Fee={trade.fee}, Timestamp={trade.timestamp}\n")
 
             file.write("\n")
 

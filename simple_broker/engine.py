@@ -116,7 +116,16 @@ class BacktestEngine:
 
             order_intents = self.strategy.on_bar(context)
 
+            # Assign order IDs to each intent
+            for intent in order_intents:
+                intent.order_id = intent.order_id  # Ensure order_id is set
+
             snapshot_after, execution_details = self.broker.process_bars(current_candles, order_intents)
+
+            # Assign trade IDs to execution details
+            for detail in execution_details:
+                if "trade" in detail and detail["trade"]:
+                    detail["trade"].trade_id = detail["trade"].trade_id
 
             # Log detailed candle data
             self.candle_logs.append({
