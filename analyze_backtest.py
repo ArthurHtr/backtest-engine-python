@@ -9,14 +9,21 @@ def analyze_backtest(candle_logs):
         file.write("================\n\n")
 
         for i, log in enumerate(candle_logs):
-            candle = log["candle"]
+            candles = log.get("candles")
+            if candles:
+                for symbol, candle in candles.items():
+                    file.write(f"Step {i + 1} - Symbol: {symbol}\n")
+                    file.write(f"Candle: Time={candle.timestamp}, Open={candle.open}, High={candle.high}, Low={candle.low}, Close={candle.close}, Volume={candle.volume}\n")
+            else:
+                candle = log["candle"]  # Fallback for single-symbol logs
+                file.write(f"Step {i + 1}:\n")
+                file.write(f"Candle: Symbol={candle.symbol}, Time={candle.timestamp}, Open={candle.open}, High={candle.high}, Low={candle.low}, Close={candle.close}, Volume={candle.volume}\n")
+
             snapshot_before = log["snapshot_before"]
             snapshot_after = log["snapshot_after"]
             order_intents = log["order_intents"]
             execution_details = log["execution_details"]
 
-            file.write(f"Step {i + 1}:\n")
-            file.write(f"Candle: Symbol={candle.symbol}, Time={candle.timestamp}, Open={candle.open}, High={candle.high}, Low={candle.low}, Close={candle.close}, Volume={candle.volume}\n")
             file.write(f"Portfolio Before: Cash={snapshot_before.cash:.2f}, Equity={snapshot_before.equity:.2f}\n")
             file.write(f"Portfolio After: Cash={snapshot_after.cash:.2f}, Equity={snapshot_after.equity:.2f}\n")
 

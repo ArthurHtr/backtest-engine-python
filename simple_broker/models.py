@@ -117,3 +117,53 @@ class PortfolioSnapshot:
             f"Cash: {self.cash:.2f}, Equity: {self.equity:.2f}, "
             f"Positions: [{positions_str}])"
         )
+
+class PortfolioState:
+    """
+    Represents the portfolio state, including cash and positions for multiple symbols.
+    """
+    def __init__(self, initial_cash: float):
+        self.cash = initial_cash
+        self.positions = {}  # Dictionary of symbol -> Position
+
+    def apply_trade(self, trade: Trade):
+        """
+        Applies a trade to the portfolio, updating cash and positions.
+        """
+        if trade.symbol not in self.positions:
+            side = PositionSide.LONG if trade.quantity > 0 else PositionSide.SHORT
+            self.positions[trade.symbol] = Position(
+                symbol=trade.symbol,
+                side=side,
+                quantity=0,
+                entry_price=trade.price
+            )
+
+        position = self.positions[trade.symbol]
+        position.update(trade_price=trade.price, trade_quantity=trade.quantity)
+
+        # Update cash
+        self.cash -= trade.quantity * trade.price + trade.fee
+
+        # Remove position if quantity is zero
+        if position.quantity == 0:
+            del self.positions[trade.symbol]
+
+    def build_snapshot(self, price_by_symbol: dict[str, float], timestamp: str):
+        """
+        Builds a snapshot of the portfolio, including unrealized PnL for all positions.
+        """
+        equity = self.cash
+        positions = []
+
+        for symbol, position in self.positions.items():
+            current_price = price_by_symbol.get(symbol, position.entry_price)
+            unrealized_pnl = (
+                (current_price - position.entry_price) * position.quantity
+                if position.side == PositionSide.LONG
+                else (position.entry_price - current_price) * abs(position.quantity)
+            )
+            equity += unrealized_pnl
+            positions.append(position)
+
+        return PortfolioSnapshot(timestamp=timestamp, cash=self.cash, equity=equity, positions=positions)

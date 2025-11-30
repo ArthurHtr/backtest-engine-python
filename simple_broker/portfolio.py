@@ -39,7 +39,10 @@ class PortfolioState:
         positions_snapshot = []
 
         for symbol, position in self.positions.items():
-            current_price = price_by_symbol.get(symbol, position.entry_price)
+            current_price = price_by_symbol.get(symbol)
+            if current_price is None:
+                continue  # Skip positions without a current price
+
             unrealized_pnl = (
                 (current_price - position.entry_price) * position.quantity
                 if position.side == PositionSide.LONG

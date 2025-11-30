@@ -63,10 +63,16 @@ class DataProvider:
             print(f"Error fetching candles: {e}")
             return []
 
-    def get_order_book(self, symbol: str):
+    def get_multiple_candles(self, symbols: list[str], start: str, end: str):
         """
-        Fetch order book data for a given symbol.
-        :param symbol: The market symbol (e.g., 'BTC/USD').
-        :return: Order book data.
+        Fetch candle data for multiple symbols and a given time range.
+        Simulates data for demonstration purposes.
+        :param symbols: List of market symbols (e.g., ['BTC/USD', 'ETH/USD']).
+        :param start: Start datetime as a string.
+        :param end: End datetime as a string.
+        :return: Dictionary of symbol -> List of candles.
         """
-        pass
+        candles_by_symbol = {}
+        for symbol in symbols:
+            candles_by_symbol[symbol] = self.get_candles(symbol, start, end)
+        return candles_by_symbol

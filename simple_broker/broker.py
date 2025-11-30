@@ -10,11 +10,13 @@ class BacktestBroker:
         self.fee_rate = fee_rate
         self.margin_requirement = 0.5  # 50% margin requirement for short positions
 
-    def get_snapshot(self, candle: Candle):
+    def get_snapshot(self, candles: dict[str, Candle]):
         """
-        Returns a snapshot of the portfolio before processing orders.
+        Returns a snapshot of the portfolio before processing orders for multiple symbols.
         """
-        return self.portfolio.build_snapshot({candle.symbol: candle.close}, candle.timestamp)
+        price_by_symbol = {symbol: candle.close for symbol, candle in candles.items() if candle}
+        timestamp = next(iter(candles.values())).timestamp if candles else ""
+        return self.portfolio.build_snapshot(price_by_symbol, timestamp)
 
     def process_bar(self, candle: Candle, order_intents: list[OrderIntent]):
         """
@@ -95,3 +97,53 @@ class BacktestBroker:
                 })
 
         return self.portfolio.build_snapshot({candle.symbol: candle.close}, candle.timestamp), execution_details
+
+    def process_bars(self, candles: dict[str, Candle], order_intents: list[OrderIntent]):
+        """
+        Processes multiple bars (candles) and executes the given order intents.
+        Tracks reasons for order rejections.
+        """
+        execution_details = []  # Track execution and rejection details
+
+        for intent in order_intents:
+            candle = candles[intent.symbol]
+            price = candle.close
+            fee = abs(intent.quantity * price) * self.fee_rate
+            total_cost = abs(intent.quantity * price) + fee
+
+            if intent.side == Side.BUY:
+                if self.portfolio.cash < total_cost:
+                    execution_details.append({
+                        "intent": intent,
+                        "status": "rejected",
+                        "reason": "Insufficient cash."
+                    })
+                    continue
+
+            elif intent.side == Side.SELL:
+                if intent.symbol in self.portfolio.positions:
+                    position = self.portfolio.positions[intent.symbol]
+                    if position.quantity < abs(intent.quantity):
+                        execution_details.append({
+                            "intent": intent,
+                            "status": "rejected",
+                            "reason": "Insufficient quantity to sell."
+                        })
+                        continue
+
+            trade_quantity = intent.quantity if intent.side == Side.BUY else -intent.quantity
+            trade = Trade(
+                symbol=intent.symbol,
+                quantity=trade_quantity,
+                price=price,
+                fee=fee,
+                timestamp=candle.timestamp
+            )
+            self.portfolio.apply_trade(trade)
+            execution_details.append({
+                "intent": intent,
+                "status": "executed",
+                "trade": trade
+            })
+
+        return self.portfolio.build_snapshot({symbol: c.close for symbol, c in candles.items()}, list(candles.values())[0].timestamp), execution_details
