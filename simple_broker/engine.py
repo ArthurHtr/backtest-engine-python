@@ -40,8 +40,16 @@ class BacktestEngine:
             # Log detailed candle data
             self.candle_logs.append({
                 "candle": candle,
-                "snapshot_before": snapshot_before,
-                "snapshot_after": snapshot_after,
+                "snapshot_before": {
+                    "cash": snapshot_before.cash,
+                    "equity": snapshot_before.equity,
+                    "positions": snapshot_before.summarize_positions()
+                },
+                "snapshot_after": {
+                    "cash": snapshot_after.cash,
+                    "equity": snapshot_after.equity,
+                    "positions": snapshot_after.summarize_positions()
+                },
                 "order_intents": order_intents,
                 "execution_details": execution_details
             })

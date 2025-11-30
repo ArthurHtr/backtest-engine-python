@@ -24,8 +24,17 @@ def analyze_backtest(candle_logs):
             order_intents = log["order_intents"]
             execution_details = log["execution_details"]
 
-            file.write(f"Portfolio Before: Cash={snapshot_before.cash:.2f}, Equity={snapshot_before.equity:.2f}\n")
-            file.write(f"Portfolio After: Cash={snapshot_after.cash:.2f}, Equity={snapshot_after.equity:.2f}\n")
+            file.write("Portfolio Before:\n")
+            file.write(f"  Cash: {snapshot_before.cash:.2f}, Equity: {snapshot_before.equity:.2f}\n")
+            file.write("  Positions:\n")
+            for symbol, details in snapshot_before.summarize_positions().items():
+                file.write(f"    {symbol}: Side={details['side']}, Quantity={details['quantity']}, Entry Price={details['entry_price']:.2f}, Realized PnL={details['realized_pnl']:.2f}\n")
+
+            file.write("Portfolio After:\n")
+            file.write(f"  Cash: {snapshot_after.cash:.2f}, Equity: {snapshot_after.equity:.2f}\n")
+            file.write("  Positions:\n")
+            for symbol, details in snapshot_after.summarize_positions().items():
+                file.write(f"    {symbol}: Side={details['side']}, Quantity={details['quantity']}, Entry Price={details['entry_price']:.2f}, Realized PnL={details['realized_pnl']:.2f}\n")
 
             file.write("Order Intents:\n")
             for intent in order_intents:
