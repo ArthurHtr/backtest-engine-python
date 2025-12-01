@@ -1,5 +1,6 @@
 import random
 from simple_broker.models.candle import Candle
+from simple_broker.models.symbol import Symbol  
 from datetime import datetime, timedelta
 
 class DataProvider:
@@ -75,3 +76,23 @@ class DataProvider:
         for symbol in symbols:
             candles_by_symbol[symbol] = self.get_candles(symbol, start, end)
         return candles_by_symbol
+
+    def get_symbols(self, symbols: list[str]) -> list[Symbol]:
+        """
+        Fetch a list of Symbol objects based on the provided symbol names.
+        :param symbols: List of symbol names to fetch.
+        :return: List of Symbol objects matching the provided names.
+        """
+        try:
+            simulated_symbols = [
+                Symbol(symbol="AAPL", base_asset="AAPL", quote_asset="USD", price_step=0.01, quantity_step=1),
+                Symbol(symbol="GOOGL", base_asset="GOOGL", quote_asset="USD", price_step=0.01, quantity_step=1),
+                Symbol(symbol="TSLA", base_asset="TSLA", quote_asset="USD", price_step=0.01, quantity_step=1),
+                Symbol(symbol="MSFT", base_asset="MSFT", quote_asset="USD", price_step=0.01, quantity_step=1),
+                Symbol(symbol="AMZN", base_asset="AMZN", quote_asset="USD", price_step=0.01, quantity_step=1),
+                Symbol(symbol="NFLX", base_asset="NFLX", quote_asset="USD", price_step=0.01, quantity_step=1),
+            ]
+            return [s for s in simulated_symbols if s.symbol in symbols]
+        except Exception as e:
+            print(f"Error fetching symbols: {e}")
+            return []

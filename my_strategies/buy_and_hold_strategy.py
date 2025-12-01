@@ -7,9 +7,9 @@ class BuyAndHoldStrategy(BaseStrategy):
     A simple Buy and Hold strategy that buys a fixed quantity of each symbol at the first timestamp
     and sells all positions at the last timestamp.
     """
-    def __init__(self):
-        self.first_timestamp = "2025-11-01T00:00:00"
-        self.last_timestamp = "2025-11-30T00:00:00"
+    def __init__(self, buy_timestamp: str = "2025-11-01T00:00:00", sell_timestamp: str = "2025-11-30T00:00:00"):
+        self.first_timestamp = buy_timestamp
+        self.last_timestamp = sell_timestamp
 
     def on_bar(self, context: StrategyContext):
         order_intents = []
