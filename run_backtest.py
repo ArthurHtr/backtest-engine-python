@@ -3,6 +3,7 @@ from simple_broker.engine import BacktestEngine
 from market_sdk.data_provider import DataProvider
 
 from my_strategies.buy_and_hold_strategy import BuyAndHoldStrategy
+from my_strategies.simple_buy_strategy import SimpleBuySellStrategy
 
 
 # Initialize SDK components
@@ -16,7 +17,8 @@ candles_by_symbol = data_provider.get_multiple_candles(symbols=[s.symbol for s i
 initial_cash = 60000
 fee_rate = 0.001
 broker = BacktestBroker(initial_cash=initial_cash, fee_rate=fee_rate)
-strategy = BuyAndHoldStrategy(buy_timestamp="2025-11-01T00:00:00", sell_timestamp="2025-11-30T00:00:00")
+# strategy = BuyAndHoldStrategy(buy_timestamp="2025-11-01T00:00:00", sell_timestamp="2025-11-30T00:00:00")
+strategy = SimpleBuySellStrategy(quantity=50)
 engine = BacktestEngine(broker=broker, strategy=strategy, data_provider=data_provider)
 
 # Run the backtest for multiple symbols

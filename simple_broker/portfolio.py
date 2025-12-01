@@ -46,12 +46,11 @@ class PortfolioState:
 
         else:
             # Mise à jour via la logique encapsulée dans Position
-            new_position, _ = position.update(qty, price)
+            new_position, realized_pnl_delta = position.update(qty, price)
 
             if new_position is None:
                 # Position complètement fermée
                 del self.positions[symbol]
-
             else:
                 self.positions[symbol] = new_position
 
