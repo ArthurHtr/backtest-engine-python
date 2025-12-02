@@ -13,16 +13,14 @@ symbols = data_provider.get_symbols(symbols=["AAPL", "GOOGL", "TSLA", "MSFT", "A
 candles_by_symbol = data_provider.get_multiple_candles(symbols=[s.symbol for s in symbols], start="2025-11-01", end="2025-11-30")  # Shortened the date range
 
 # Initialize components
-initial_cash = 60000
-fee_rate = 0.001
-broker = BacktestBroker(initial_cash=initial_cash, fee_rate=fee_rate)
+broker = BacktestBroker(initial_cash=10000, fee_rate=0.001)
 strategy = BuyAndHoldStrategy(buy_timestamp="2025-11-01T00:00:00", sell_timestamp="2025-11-30T00:00:00")
 engine = BacktestEngine(broker=broker, strategy=strategy, data_provider=data_provider)
 
-# Run the backtest for multiple symbols
-snapshots = engine.run(candles_by_symbol)
+# Run the backtest
+candles_logs = engine.run(candles_by_symbol)
 
-def analyze_backtest(candle_logs, filepath: str = "backtest_analysis.txt") -> None:
+def analyze_backtest(candles_logs, filepath: str = "backtest_analysis.txt") -> None:
     """
     Analyse et export du backtest dans un fichier texte lisible.
     """
@@ -30,7 +28,7 @@ def analyze_backtest(candle_logs, filepath: str = "backtest_analysis.txt") -> No
         file.write("Backtest Analysis\n")
         file.write("=================\n\n")
 
-        for step_idx, log in enumerate(candle_logs, start=1):
+        for step_idx, log in enumerate(candles_logs, start=1):
             candles = log.get("candles")
             snapshot_before = log["snapshot_before"]
             snapshot_after = log["snapshot_after"]
@@ -161,7 +159,6 @@ def analyze_backtest(candle_logs, filepath: str = "backtest_analysis.txt") -> No
 
             file.write("\n\n")
 
-
-analyze_backtest(engine.candle_logs)
+analyze_backtest(candles_logs=candles_logs, filepath="backtest_analysis.txt")
 print("Backtest analysis written to backtest_analysis.txt")
 

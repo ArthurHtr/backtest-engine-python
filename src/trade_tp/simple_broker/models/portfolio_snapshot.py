@@ -23,11 +23,3 @@ class PortfolioSnapshot:
             }
             for position in self.positions
         }
-
-    def __repr__(self):
-        positions_str = ", ".join([f"{p.symbol}: {p.quantity} @ {p.entry_price}" for p in self.positions])
-        return (
-            f"PortfolioSnapshot(Timestamp: {self.timestamp}, "
-            f"Cash: {self.cash:.2f}, Equity: {self.equity:.2f}, "
-            f"Positions: [{positions_str}])"
-        )

@@ -7,9 +7,10 @@ class StrategyContext:
     """
     Provides context to the strategy during backtesting.
     """
-    def __init__(self, candles: dict[str, Candle], portfolio_snapshot: PortfolioSnapshot):
+    def __init__(self, candles: dict[str, Candle], portfolio_snapshot: PortfolioSnapshot, past_candles: dict[str, list[Candle]]):
         self.candles = candles
         self.portfolio_snapshot = portfolio_snapshot
+        self.past_candles = past_candles
 
 class BaseStrategy(ABC):
     """

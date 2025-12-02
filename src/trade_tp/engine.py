@@ -1,5 +1,7 @@
 from src.trade_tp.simple_broker.models.candle import Candle
 from src.trade_tp.simple_broker.models.portfolio_snapshot import PortfolioSnapshot
+from src.trade_tp.simple_broker.models.candle import Candle
+from src.trade_tp.simple_broker.models.portfolio_snapshot import PortfolioSnapshot
 
 from src.trade_tp.simple_broker.broker import BacktestBroker
 from src.trade_tp.simple_broker.models.strategy import BaseStrategy, StrategyContext
@@ -7,6 +9,7 @@ from src.trade_tp.simple_broker.models.strategy import BaseStrategy, StrategyCon
 from src.trade_tp.sdk.data_provider import DataProvider
 from tqdm import tqdm
 from collections import defaultdict
+
 
 class BacktestEngine:
     """
@@ -24,13 +27,10 @@ class BacktestEngine:
         Optimised: no scan O(N) des listes de candles à chaque timestamp.
         """
         snapshots: list[PortfolioSnapshot] = []
-        self.snapshots = snapshots
+        candles_logs: list[dict] = []
+        self.order_details: list[dict] = []
+        past_candles: dict[str, list[Candle]] = {symbol: [] for symbol in candles_by_symbol.keys()}
 
-        self.order_details = []
-        candle_logs: list[dict] = []
-        self.candle_logs = candle_logs
-
-        # 1) Pré-indexation : timestamp (str) -> {symbol -> Candle}
         candles_by_timestamp: dict[str, dict[str, Candle]] = defaultdict(dict)
 
         for symbol, candles in candles_by_symbol.items():
@@ -38,36 +38,37 @@ class BacktestEngine:
                 ts = candle.timestamp  # c'est une str, ex: "2025-11-30T12:34:00"
                 candles_by_timestamp[ts][symbol] = candle
 
-        # 2) Liste triée des timestamps (ordre lexicographique OK avec ISO-8601)
         timestamps = sorted(candles_by_timestamp.keys())
 
-        # Micro-optimisations : alias locaux
-        broker = self.broker
-        strategy = self.strategy
-        append_snapshot = snapshots.append
-        append_log = candle_logs.append
-
-        # 3) Boucle principale
+        # Boucle principale
         for ts in tqdm(timestamps):
             current_candles = candles_by_timestamp[ts]
             if not current_candles:
                 continue
 
-            snapshot_before = broker.get_snapshot(current_candles)
+            for symbol in candles_by_symbol.keys():
+                c = current_candles.get(symbol)
+                if c is not None:
+                    past_candles[symbol].append(c)
+
+            snapshot_before = self.broker.get_snapshot(current_candles)
 
             context = StrategyContext(
                 candles=current_candles,
                 portfolio_snapshot=snapshot_before,
+                past_candles=past_candles,
             )
 
-            order_intents = strategy.on_bar(context)
+            order_intents = self.strategy.on_bar(context)
 
-            snapshot_after, execution_details = broker.process_bars(
+            snapshot_after, execution_details = self.broker.process_bars(
                 current_candles,
                 order_intents,
             )
 
-            append_log({
+            snapshots.append(snapshot_after)
+ 
+            candles_logs.append({
                 "timestamp": ts,
                 "candles": current_candles,
                 "snapshot_before": snapshot_before,
@@ -76,7 +77,5 @@ class BacktestEngine:
                 "execution_details": execution_details,
             })
 
-            append_snapshot(snapshot_after)
-
-        return snapshots
+        return candles_logs
 

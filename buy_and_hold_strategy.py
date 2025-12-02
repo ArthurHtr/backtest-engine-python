@@ -12,6 +12,7 @@ class BuyAndHoldStrategy(BaseStrategy):
         self.last_timestamp = sell_timestamp
 
     def on_bar(self, context: StrategyContext):
+
         order_intents = []
 
         timestamp = context.candles[next(iter(context.candles))].timestamp
