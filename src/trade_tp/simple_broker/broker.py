@@ -14,7 +14,7 @@ class BacktestBroker:
     Simulates a broker for backtesting, supporting long and short positions.
     """
 
-    def __init__(self, initial_cash: float, fee_rate: float, margin_requirement: float = 0.5):
+    def __init__(self, initial_cash: float, fee_rate: float, margin_requirement: float):
         self.portfolio = PortfolioState(initial_cash)
         self.fee_rate = fee_rate
         self.margin_requirement = margin_requirement

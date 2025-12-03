@@ -74,7 +74,6 @@ class PortfolioState:
 
             equity += market_value
 
-            # pour le calcul d'equity (le realized est déjà dans self.cash).
             positions_snapshot.append(
                 Position(
                     symbol=position.symbol,
