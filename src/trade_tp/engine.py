@@ -35,7 +35,7 @@ class BacktestEngine:
 
         for symbol, candles in candles_by_symbol.items():
             for candle in candles:
-                ts = candle.timestamp  # c'est une str, ex: "2025-11-30T12:34:00"
+                ts = candle.timestamp
                 candles_by_timestamp[ts][symbol] = candle
 
         timestamps = sorted(candles_by_timestamp.keys())

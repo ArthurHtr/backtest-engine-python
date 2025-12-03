@@ -14,11 +14,11 @@ symbols = data_provider.get_symbols(symbols=["AAPL", "GOOGL", "TSLA", "MSFT", "A
 candles_by_symbol = data_provider.get_multiple_candles(symbols=[s.symbol for s in symbols], start="2025-11-01", end="2025-11-30")  # Shortened the date range
 
 # Initialize components
-broker = BacktestBroker(initial_cash=100_000, fee_rate=0.001, margin_requirement=0.5)
+broker = BacktestBroker(initial_cash=20_000, fee_rate=0.001, margin_requirement=0.5)
 
 # ------------------------------ Strategy ------------------------------
-strategy = BuyAndHoldStrategy(buy_timestamp="2025-11-01T00:00:00", sell_timestamp="2025-11-30T00:00:00")
-# strategy = MovingAverageCrossoverStrategy(short_window=5, long_window=20, quantity=100.0)
+# strategy = BuyAndHoldStrategy(buy_timestamp="2025-11-01T00:00:00", sell_timestamp="2025-11-30T00:00:00")
+strategy = MovingAverageCrossoverStrategy(short_window=5, long_window=20, quantity=10.0)
 # ----------------------------------------------------------------------
 
 
@@ -124,17 +124,24 @@ def logs_visualisation(candles_logs, filepath: str = "backtest_analysis.txt") ->
                     status = detail["status"]
                     reason = detail.get("reason", "N/A")
                     trade = detail.get("trade")
-                    order_id = detail["intent"].order_id
+                    intent = detail.get("intent")
 
-                    file.write(
-                        f"  - OrderID={order_id}, "
-                        f"Status={status}, "
-                        f"Reason={reason}\n"
-                    )
+                    if intent is not None:
+                        order_id = intent.order_id
+                        file.write(
+                            f"  - OrderID={order_id}, "
+                            f"Status={status}, "
+                            f"Reason={reason}\n"
+                        )
+                    else:
+                        # liquidation or internal event without an explicit intent
+                        file.write(
+                            f"  - Event: {status}, Reason={reason}\n"
+                        )
 
                     if trade:
                         file.write(
-                            f"    TradeID={trade.trade_id}, "
+                            f"    TradeID={getattr(trade, 'trade_id', 'N/A')}, "
                             f"Qty={trade.quantity}, "
                             f"Price={trade.price:.4f}, "
                             f"Fee={trade.fee:.4f}, "

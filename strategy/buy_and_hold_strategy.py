@@ -23,7 +23,7 @@ class BuyAndHoldStrategy(BaseStrategy):
                 order_intents.append(OrderIntent(
                     symbol=symbol,
                     side=Side.BUY,
-                    quantity=100  # Fixed quantity to buy
+                    quantity=50  # Fixed quantity to buy
                 ))
 
         # Place sell orders only at the last timestamp
