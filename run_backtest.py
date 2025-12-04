@@ -1,6 +1,6 @@
 from src.trade_tp.simple_broker.broker import BacktestBroker
 from src.trade_tp.engine import BacktestEngine
-from src.trade_tp.sdk.data_provider import DataProvider
+from src.trade_tp.simulated_market_data.data_provider import DataProvider
 
 from strategy.buy_and_hold_strategy import BuyAndHoldStrategy
 from strategy.moving_average_crossover_strategy import MovingAverageCrossoverStrategy
@@ -14,11 +14,11 @@ symbols = data_provider.get_symbols(symbols=["AAPL", "GOOGL", "TSLA", "MSFT", "A
 candles_by_symbol = data_provider.get_multiple_candles(symbols=[s.symbol for s in symbols], start="2025-11-01", end="2025-11-30")  # Shortened the date range
 
 # Initialize components
-broker = BacktestBroker(initial_cash=20_000, fee_rate=0.001, margin_requirement=0.5)
+broker = BacktestBroker(initial_cash=100_000, fee_rate=0.001, margin_requirement=0.5)
 
 # ------------------------------ Strategy ------------------------------
-# strategy = BuyAndHoldStrategy(buy_timestamp="2025-11-01T00:00:00", sell_timestamp="2025-11-30T00:00:00")
-strategy = MovingAverageCrossoverStrategy(short_window=3, long_window=7, quantity=1)
+strategy = BuyAndHoldStrategy(buy_timestamp="2025-11-01T00:00:00", sell_timestamp="2025-11-30T00:00:00")
+# strategy = MovingAverageCrossoverStrategy(short_window=3, long_window=7, quantity=1)
 # ----------------------------------------------------------------------
 
 
@@ -172,7 +172,6 @@ def logs_visualisation(candles_logs, filepath: str = "backtest_analysis.txt") ->
                 file.write("  Positions: (none)\n")
 
             file.write("\n\n")
-
 
 logs_visualisation(candles_logs=candles_logs, filepath="backtest_analysis.txt")
 print("Backtest analysis written to backtest_analysis.txt")

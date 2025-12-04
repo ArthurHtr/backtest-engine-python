@@ -6,7 +6,7 @@ from src.trade_tp.simple_broker.models.portfolio_snapshot import PortfolioSnapsh
 from src.trade_tp.simple_broker.broker import BacktestBroker
 from src.trade_tp.simple_broker.models.strategy import BaseStrategy, StrategyContext
 
-from src.trade_tp.sdk.data_provider import DataProvider
+from src.trade_tp.simulated_market_data.data_provider import DataProvider
 from tqdm import tqdm
 from collections import defaultdict
 
