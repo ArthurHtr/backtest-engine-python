@@ -18,7 +18,7 @@ broker = BacktestBroker(initial_cash=20_000, fee_rate=0.001, margin_requirement=
 
 # ------------------------------ Strategy ------------------------------
 # strategy = BuyAndHoldStrategy(buy_timestamp="2025-11-01T00:00:00", sell_timestamp="2025-11-30T00:00:00")
-strategy = MovingAverageCrossoverStrategy(short_window=5, long_window=20, quantity=10.0)
+strategy = MovingAverageCrossoverStrategy(short_window=3, long_window=7, quantity=1)
 # ----------------------------------------------------------------------
 
 

@@ -2,8 +2,18 @@ from src.trade_tp.simple_broker.models.positions import Position
 
 class PortfolioSnapshot:
     """
-    Represents a snapshot of the portfolio at a specific point in time.
+    Snapshot immuable (vue) de l'état du portefeuille à un instant donné.
+
+    Champs
+    - timestamp (str): horodatage du snapshot
+    - cash (float): liquidités disponibles
+    - equity (float): valeur nette (cash + market value des positions)
+    - positions (list[Position]): liste des positions au moment du snapshot
+
+    Ce type est utilisé par les stratégies pour décider des actions (OrderIntent)
+    et par la sortie d'analyse pour afficher l'état du portefeuille.
     """
+
     def __init__(self, timestamp: str, cash: float, equity: float, positions: list[Position]):
         self.timestamp = timestamp
         self.cash = cash
@@ -12,7 +22,18 @@ class PortfolioSnapshot:
 
     def summarize_positions(self):
         """
-        Returns a summary of positions as a dictionary.
+        Retourne un dictionnaire synthétique des positions, indexé par symbole.
+
+        Format de retour
+        {
+            symbol: {
+                "side": "LONG"|"SHORT",
+                "quantity": float,
+                "entry_price": float,
+                "realized_pnl": float,
+            },
+            ...
+        }
         """
         return {
             position.symbol: {

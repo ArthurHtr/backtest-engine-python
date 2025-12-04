@@ -5,10 +5,15 @@ from src.trade_tp.simple_broker.models.enums import PositionSide
 class Position:
     """
     Représente une position ouverte (LONG ou SHORT) sur un symbole donné.
-    Gère:
-    - moyenne de prix d'entrée
-    - fermeture partielle / totale / reverse
-    - realized PnL au niveau de la position
+
+    Responsibilities
+    - Maintenir la quantité et le prix d'entrée (moyenne pondérée lors d'ajouts)
+    - Calculer et accumuler le realized PnL lors de fermetures partielles/totales
+    - Gérer les opérations de reverse (fermer puis ouvrir l'opposé)
+
+    Conventions
+    - Les quantités stockées dans `Position.quantity` sont des magnitudes (>= 0).
+    - Le sens (LONG/SHORT) est dans `Position.side`.
     """
 
     def __init__(self, symbol: str, side: PositionSide, quantity: float, entry_price: float, realized_pnl: float = 0.0) -> None:
@@ -20,20 +25,22 @@ class Position:
 
     def update(self, qty: float, price: float) -> Tuple[Optional["Position"], float]:
         """
-        Update la position existante.
+        Met à jour la position à partir d'un trade.
 
         Paramètres
-        ----------
-        qty : float
-            Quantité du trade (BUY > 0, SELL < 0).
-        price : float
-            Prix du trade.
+        - qty (float): quantité du trade (BUY > 0, SELL < 0 selon conventions)
+        - price (float): prix d'exécution
 
-        Retourne
-        --------
-        (new_position, realized_pnl_delta)
-            - new_position : self modifiée, une nouvelle position, ou None si la position est totalement fermée.
-            - realized_pnl_delta : PnL réalisé généré par CE trade.
+        Retour
+        - (new_position, realized_pnl_delta):
+          - new_position: l'objet Position mis à jour (peut être self),
+                          ou None si la position est complètement fermée.
+          - realized_pnl_delta: montant du PnL réalisé généré par ce trade
+
+        Comportements pris en charge
+        - Ajout à une position existante (moyenne du prix d'entrée)
+        - Fermeture partielle / totale
+        - Reverse (fermer puis ouvrir la position opposée)
         """
         if qty == 0:
             return self, 0.0

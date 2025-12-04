@@ -11,33 +11,79 @@ from src.trade_tp.simple_broker.portfolio import PortfolioState
 
 class BacktestBroker:
     """
-    Simulates a broker for backtesting, supporting long and short positions.
+    Broker simulé utilisé par le moteur de backtest.
+
+    Ce composant a pour rôle d'interpréter les intentions d'ordre (OrderIntent)
+    provenant d'une stratégie, d'effectuer des validations préalables (cash,
+    marge, disponibilité du prix, logique de reverse), de construire un objet
+    `Trade` et de demander l'application du trade au `PortfolioState`.
+
+    Comportement clé et invariants
+    - L'équité (equity) utilisée pour les contrôles est toujours calculée comme
+      : cash + valeur de marché des positions (concorde avec
+      `PortfolioState.build_snapshot`).
+    - Les validations sensibles à la marge sont effectuées en deux étapes :
+      1) validations pré-trade conservatrices dans `_validate_and_build_trade`
+         (ex : suffisance de cash pour achat, marge initiale requise pour
+         l'ouverture d'un short, contrôle de reverse implicite) ;
+      2) validation finale de maintenance margin exécutée au moment de
+         l'application via `PortfolioState.apply_trade`, qui simule le post-trade
+         et peut refuser sans muter l'état si la marge de maintenance est
+         insuffisante. Cette séparation évite d'exécuter un trade puis de devoir
+         l'annuler (double frais / incohérences).
+
+    Paramètres d'initialisation
+    - initial_cash (float) : cash initial du portefeuille.
+    - fee_rate (float) : fraction appliquée au notional de l'ordre pour calculer
+      les frais (ex : 0.002 = 0.2%).
+    - margin_requirement (float) : fraction d'exigence initiale pour ouvrir une
+      exposition (utilisée dans les validations pré-trade pour les shorts).
+    - maintenance_margin (float) : fraction de maintenance utilisée pour décider
+      si une position short doit être refusée/liquidée (ex : 0.25 pour 25%).
+
+    Notes
+    - Les méthodes publiques retournent des structures simples (snapshot, liste
+      de détails d'exécution) utiles au moteur pour journaliser / exporter le
+      résultat du bar.
+    - Les messages et raisons de rejet sont conçus pour être lisibles et
+      suffisants pour du débogage utilisateur lors d'un backtest.
     """
 
     def __init__(self, initial_cash: float, fee_rate: float, margin_requirement: float, maintenance_margin: float = 0.25):
         self.portfolio = PortfolioState(initial_cash)
         self.fee_rate = fee_rate
         self.margin_requirement = margin_requirement
-        # maintenance_margin is the fraction of a position's notional that must be
-        # covered by equity to avoid forced liquidation (e.g., 0.25 = 25%).
+        # maintenance_margin est la fraction du notionnel qui doit être couverte
+        # par l'equity pour éviter la liquidation immédiate (ex: 0.25 = 25%).
         self.maintenance_margin = maintenance_margin
 
     def _compute_equity(self, price_by_symbol: Dict[str, float]) -> float:
         """
-        Compute portfolio equity = cash + sum(unrealized PnL) given prices.
+        Calcule l'equity (Net Asset Value) du portefeuille pour des prix
+        donnés.
+
+        equity = cash + somme(market_value des positions)
+
+        - Pour une position LONG : market_value = price * quantity
+        - Pour une position SHORT : market_value = - price * abs(quantity)
+
+        Ce calcul correspond explicitement à `PortfolioState.build_snapshot`
+        afin d'éviter toute divergence entre validation et reporting.
+
+        Args:
+            price_by_symbol: mapping symbol -> prix (float) à utiliser.
+
+        Returns:
+            float: valeur de l'equity calculée.
         """
-        # Equity should be calculated as cash + market value of positions
-        # to remain consistent with PortfolioState.build_snapshot.
         equity = self.portfolio.cash
 
         for symbol, pos in self.portfolio.positions.items():
             price = price_by_symbol.get(symbol, pos.entry_price)
 
             if pos.side == PositionSide.LONG:
-                # market value of a long position
                 market_value = price * pos.quantity
             elif pos.side == PositionSide.SHORT:
-                # market value of a short is negative
                 market_value = -price * abs(pos.quantity)
             else:
                 market_value = 0.0
@@ -47,16 +93,38 @@ class BacktestBroker:
         return equity
 
     def _build_price_map(self, candles: Dict[str, Candle]) -> Dict[str, float]:
+        """
+        Retourne un mapping symbol -> close price à partir d'un dictionnaire de
+        bougies (candles). Filtre les entrées `None`.
+        """
         return {symbol: c.close for symbol, c in candles.items() if c is not None}
 
     def _validate_and_build_trade(self, intent: OrderIntent, price_by_symbol: Dict[str, float], timestamp: str) -> Tuple[Dict, Trade | None]:
         """
-        Valide un ordre et, si accepté, construit le Trade correspondant.
-        Gère :
-        - long / short
-        - fermeture partielle / totale
-        - reverse implicite (LONG -> SHORT, SHORT -> LONG)
-        - marge uniquement sur la partie short.
+        Valide une intention d'ordre et construit un `Trade` si l'ordre peut
+        être accepté selon des règles conservatrices.
+
+        Comportement géré
+        - Vérification de la présence d'un prix pour le symbole.
+        - Calcul des frais et du notional.
+        - Traitement des cas : achat (BUY), vente (SELL), couverture partielle,
+          fermeture totale, reverse implicite (ex: transformer un long en
+          short), ouverture/augmentation de short.
+        - Vérification pré-trade de cash pour les achats et des exigences de
+          marge initiale pour la partie short.
+        - Vérification anticipée de la maintenance margin pour éviter
+          l'exécution suivie d'une liquidation immédiate.
+
+        Retourne une paire (detail, trade_or_none) où :
+        - detail : dict décrivant le statut ('executed' ou 'rejected') et la
+          raison (utile pour les logs/explanations)
+        - trade_or_none : instance de `Trade` si l'ordre peut être appliqué, ou
+          None en cas de rejet.
+
+        Important:
+        - Cette méthode effectue des validations préalables. La validation
+          finale de maintenance est effectuée par `PortfolioState.apply_trade`
+          qui simule le post-trade et peut refuser sans muter l'état.
         """
         symbol = intent.symbol
 
@@ -79,30 +147,13 @@ class BacktestBroker:
 
         # BUY
         if intent.side == Side.BUY:
-            # Cas 1 : position SHORT existante
-            if position is not None and position.side == PositionSide.SHORT:
-                current_qty = abs(position.quantity)
-
-                if qty <= current_qty:
-                    # Couverture partielle ou totale du short : pas de nouvelle marge.
-                    # On ne fait qu'acheter pour couvrir, Position fera le détail.
-                    pass
-                else:
-                    # Reverse implicite : on couvre tout le short puis on ouvre un long
-                    # sur la quantité excédentaire. Le long est "cash only", pas de marge.
-                    # On n'a donc pas d'autre contrôle que le cash ci-dessous.
-                    pass
-
-            # Cas 2 : pas de position ou déjà LONG
-            # Vérification du cash pour l'achat complet (cover + éventuel long)
+            # Si on couvre un short existant, on n'applique pas de nouvelle marge
+            # pour la partie couverture; si l'achat ouvre un long (reverse),
+            # celui-ci est financé en cash.
             total_cost = notional + fee
             if self.portfolio.cash < total_cost:
                 return (
-                    {
-                        "intent": intent,
-                        "status": "rejected",
-                        "reason": "Insufficient cash.",
-                    },
+                    {"intent": intent, "status": "rejected", "reason": "Insufficient cash."},
                     None,
                 )
 
@@ -110,24 +161,23 @@ class BacktestBroker:
 
         # SELL
         elif intent.side == Side.SELL:
-            # Cas 1 : position LONG existante
+            # Vente quand position LONG existante : fermeture partielle/totale
             if position is not None and position.side == PositionSide.LONG:
                 current_qty = position.quantity
 
                 if qty <= current_qty:
-                    # Vente dans la limite du long : fermeture partielle/totale.
-                    # Pas de nouvelle exposition short : pas de marge.
+                    # Simple clôture partielle ou totale du long
                     trade_quantity = -qty
 
                 else:
-                    # Reverse implicite : on vend plus que la taille du long.
+                    # Reverse implicite : on clôture le long puis on ouvre un
+                    # short pour la quantité excédentaire -> la partie short
+                    # est soumise à marge initiale/maintenance.
                     extra_short = qty - current_qty
                     extra_notional = extra_short * price
                     required_margin = abs(extra_notional) * self.margin_requirement
 
-                    # Simulate equity after closing the existing long (before opening the short):
-                    # closing the long generates proceeds = current_qty * price which
-                    # increase cash; then we compute market value of other symbols.
+                    # Simule les effets immédiats de la clôture du long
                     proceeds_close = current_qty * price
                     cash_after_close = self.portfolio.cash + proceeds_close - fee
 
@@ -143,41 +193,25 @@ class BacktestBroker:
 
                     equity_after_close = cash_after_close + other_market
 
-                    # Also check maintenance margin: if executing this reverse would
-                    # immediately put equity below maintenance threshold for the new
-                    # short exposure, reject the intent up front to avoid execute+liquidate.
                     required_maint = abs(extra_notional) * self.maintenance_margin
                     if equity_after_close < required_maint:
                         return (
-                            {
-                                "intent": intent,
-                                "status": "rejected",
-                                "reason": "Would breach maintenance margin on reverse.",
-                            },
+                            {"intent": intent, "status": "rejected", "reason": "Would breach maintenance margin on reverse."},
                             None,
                         )
 
                     if equity_after_close < required_margin:
                         return (
-                            {
-                                "intent": intent,
-                                "status": "rejected",
-                                "reason": "Insufficient margin for reverse.",
-                            },
+                            {"intent": intent, "status": "rejected", "reason": "Insufficient margin for reverse."},
                             None,
                         )
 
-                    # On laisse Position.apply_trade gérer
                     trade_quantity = -qty
 
             else:
-                # Cas 2 : pas de position ou déjà SHORT
-                # SELL ouvre ou augmente un short.
+                # Ouverture/augmentation d'un short
                 required_margin = abs(notional) * self.margin_requirement
 
-                # Simulate equity after executing the sell (opening/increasing short).
-                # Selling increases cash by `notional` but also creates a short whose
-                # market value is -notional, so the net effect on equity is mainly fees.
                 cash_after = self.portfolio.cash + notional - fee
 
                 other_market = 0.0
@@ -192,26 +226,16 @@ class BacktestBroker:
 
                 equity_after = cash_after + other_market
 
-                # Reject upfront if this would immediately breach maintenance margin
-                # for the new short exposure (so we don't execute then forcibly close).
                 required_maint = abs(notional) * self.maintenance_margin
                 if equity_after < required_maint:
                     return (
-                        {
-                            "intent": intent,
-                            "status": "rejected",
-                            "reason": "Would breach maintenance margin.",
-                        },
+                        {"intent": intent, "status": "rejected", "reason": "Would breach maintenance margin."},
                         None,
                     )
 
                 if equity_after < required_margin:
                     return (
-                        {
-                            "intent": intent,
-                            "status": "rejected",
-                            "reason": "Insufficient margin.",
-                        },
+                        {"intent": intent, "status": "rejected", "reason": "Insufficient margin."},
                         None,
                     )
 
@@ -219,36 +243,27 @@ class BacktestBroker:
 
         else:
             return (
-                {
-                    "intent": intent,
-                    "status": "rejected",
-                    "reason": f"Unsupported side: {intent.side}",
-                },
+                {"intent": intent, "status": "rejected", "reason": f"Unsupported side: {intent.side}"},
                 None,
             )
 
-        # Construction du Trade
-        trade = Trade(
-            symbol=symbol,
-            quantity=trade_quantity,
-            price=price,
-            fee=fee,
-            timestamp=timestamp,
-        )
+        # Construction du Trade prêt à être appliqué. L'application finale
+        # (commit) et la validation de maintenance sont effectuées dans
+        # `PortfolioState.apply_trade`.
+        trade = Trade(symbol=symbol, quantity=trade_quantity, price=price, fee=fee, timestamp=timestamp)
 
-        return (
-            {
-                "intent": intent,
-                "status": "executed",
-                "trade": trade,
-            },
-            trade,
-        )
+        return ({"intent": intent, "status": "executed", "trade": trade}, trade)
 
     def get_snapshot(self, candles: Dict[str, Candle]):
         """
-        Returns a snapshot of the portfolio before processing orders
-        for multiple symbols.
+        Retourne l'instantané (snapshot) du portefeuille à partir des candles
+        fournies. Utile pour afficher l'état avant le traitement des ordres.
+
+        Args:
+            candles: mapping symbol -> Candle
+
+        Returns:
+            PortfolioSnapshot
         """
         price_by_symbol = self._build_price_map(candles)
         timestamp = next(iter(candles.values())).timestamp if candles else ""
@@ -256,8 +271,26 @@ class BacktestBroker:
 
     def process_bars(self, candles: Dict[str, Candle], order_intents: List[OrderIntent]) -> Tuple[PortfolioSnapshot, List[Dict]]:
         """
-        Processes multiple bars (one per symbol) and executes the given order intents.
-        Uses a single, coherent validation logic (cash, quantity, margin).
+        Traite un ensemble d'ordres pour la barre courante.
+
+        Pour chaque `OrderIntent` :
+        - on valide et construit un `Trade` via `_validate_and_build_trade` ;
+        - si un Trade est créé, on demande à `PortfolioState.apply_trade` de
+          l'appliquer ; `apply_trade` effectue une simulation finale et peut
+          refuser (retourne (accepted=False, reason=...)) sans muter l'état.
+
+        L'utilisation de cette séquence évite : exécution -> rejet -> double
+        frais, et garantit que la validation de maintenance est faite au plus
+        juste avant le commit.
+
+        Args:
+            candles: mapping symbol -> Candle pour la barre courante.
+            order_intents: liste d'OrderIntent fournie par la stratégie.
+
+        Returns:
+            Tuple[PortfolioSnapshot, List[Dict]] : snapshot après exécution et
+            une liste de détails d'exécution (statut + raison/trade) pour
+            chaque intent.
         """
         execution_details: List[Dict] = []
 
@@ -265,32 +298,17 @@ class BacktestBroker:
         timestamp = next(iter(candles.values())).timestamp if candles else ""
 
         for intent in order_intents:
-            detail, trade = self._validate_and_build_trade(
-                intent,
-                price_by_symbol=price_by_symbol,
-                timestamp=timestamp,
-            )
+            detail, trade = self._validate_and_build_trade(intent, price_by_symbol=price_by_symbol, timestamp=timestamp)
             if trade is not None:
-                # Try to apply the trade; PortfolioState.apply_trade will simulate
-                # the post-trade state and reject if maintenance margin would be breached.
+                # Essayer d'appliquer le trade ; PortfolioState.apply_trade
+                # simule et refuse si la maintenance margin est insuffisante.
                 accepted, reason = self.portfolio.apply_trade(trade, price_by_symbol, self.maintenance_margin)
 
                 if not accepted:
-                    # Override detail to reflect rejection at apply time
-                    execution_details.append({
-                        "intent": intent,
-                        "status": "rejected",
-                        "reason": reason,
-                    })
-                    # Do not append the original 'executed' detail or apply the trade
+                    execution_details.append({"intent": intent, "status": "rejected", "reason": reason})
                     continue
-                else:
-                    # Trade successfully applied; record execution detail including the trade
-                    execution_details.append({
-                        "intent": intent,
-                        "status": "executed",
-                        "trade": trade,
-                    })
+
+                execution_details.append({"intent": intent, "status": "executed", "trade": trade})
             else:
                 execution_details.append(detail)
 
