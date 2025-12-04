@@ -271,64 +271,29 @@ class BacktestBroker:
                 timestamp=timestamp,
             )
             if trade is not None:
-                # On applique le trade (mise à jour cash + positions)
-                self.portfolio.apply_trade(trade)
+                # Try to apply the trade; PortfolioState.apply_trade will simulate
+                # the post-trade state and reject if maintenance margin would be breached.
+                accepted, reason = self.portfolio.apply_trade(trade, price_by_symbol, self.maintenance_margin)
 
-            execution_details.append(detail)
+                if not accepted:
+                    # Override detail to reflect rejection at apply time
+                    execution_details.append({
+                        "intent": intent,
+                        "status": "rejected",
+                        "reason": reason,
+                    })
+                    # Do not append the original 'executed' detail or apply the trade
+                    continue
+                else:
+                    # Trade successfully applied; record execution detail including the trade
+                    execution_details.append({
+                        "intent": intent,
+                        "status": "executed",
+                        "trade": trade,
+                    })
+            else:
+                execution_details.append(detail)
 
         snapshot = self.portfolio.build_snapshot(price_by_symbol, timestamp)
 
         return snapshot, execution_details
-
-    def _enforce_maintenance_margin(self, price_by_symbol: Dict[str, float], timestamp: str) -> List[Dict]:
-        """
-        Enforce maintenance margin by liquidating short positions if equity
-        falls below the maintenance requirement for that position.
-
-        Returns a list of liquidation event dicts to be appended to execution details.
-        """
-        events: List[Dict] = []
-
-        # Recompute equity and iterate over shorts ordered by notional (desc)
-        equity = self._compute_equity(price_by_symbol)
-
-        # Gather short positions with their current price and notional
-        shorts = []
-        for symbol, pos in list(self.portfolio.positions.items()):
-            if pos.side == PositionSide.SHORT:
-                price = price_by_symbol.get(symbol, pos.entry_price)
-                notional = price * abs(pos.quantity)
-                shorts.append((notional, symbol, pos, price))
-
-        # Sort by largest notional first (liquidate largest risks first)
-        shorts.sort(reverse=True, key=lambda x: x[0])
-
-        for notional, symbol, pos, price in shorts:
-            required_maint = notional * self.maintenance_margin
-
-            # If equity is already sufficient, continue
-            if equity >= required_maint:
-                continue
-
-            # Need to liquidate this short entirely (buy back quantity)
-            close_qty = pos.quantity  # quantity is positive magnitude
-            fee = abs(close_qty * price) * self.fee_rate
-
-            # Build and apply buy trade to close the short
-            trade = Trade(symbol=symbol, quantity=close_qty, price=price, fee=fee, timestamp=timestamp)
-            self.portfolio.apply_trade(trade)
-
-            # Recompute equity after liquidation
-            equity = self._compute_equity(price_by_symbol)
-
-            events.append({
-                "intent": None,
-                "status": "liquidated",
-                "reason": "Maintenance margin breach - short position forcibly closed.",
-                "trade": trade,
-            })
-
-            # If equity recovered above required_maint for remaining positions, continue
-            # The loop will check next positions as equity has been updated.
-
-        return events

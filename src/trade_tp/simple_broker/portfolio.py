@@ -22,39 +22,87 @@ class PortfolioState:
         self.cash: float = initial_cash
         self.positions: dict[str, Position] = {}
 
-    def apply_trade(self, trade: Trade) -> None:
+    def apply_trade(self, trade: Trade, price_by_symbol: dict, maintenance_margin: float) -> tuple[bool, str | None]:
         """
-        Met à jour le portefeuille à partir d'un trade exécuté.
-        """        
+        Met à jour le portefeuille à partir d'un trade exécuté, mais effectue
+        d'abord une simulation pour vérifier que la maintenance margin ne
+        serait pas violée après l'exécution.
+
+        Parameters
+        - trade: Trade à appliquer (contient fee)
+        - price_by_symbol: mapping des prix courants pour calculer market values
+        - maintenance_margin: fraction (e.g., 0.25) utilisée pour le seuil de maintenance
+
+        Returns (accepted: bool, reason: Optional[str])
+        - If accepted is False, the portfolio is not modified and reason gives the rejection cause.
+        - If accepted is True, the trade is applied and reason is None.
+        """
         symbol = trade.symbol
         qty = float(trade.quantity)
         price = float(trade.price)
         fee = float(trade.fee)
 
-        position = self.positions.get(symbol)
+        # --- Build a simulated portfolio state after the trade ---
+        # shallow copy cash
+        cash_after = self.cash - qty * price - fee
 
-        if position is None:
-            # Ouverture de position pure
+        # clone positions dict with new Position instances to avoid mutating real ones
+        simulated_positions: dict[str, Position] = {}
+        for s, p in self.positions.items():
+            simulated_positions[s] = Position(
+                symbol=p.symbol,
+                side=p.side,
+                quantity=p.quantity,
+                entry_price=p.entry_price,
+                realized_pnl=p.realized_pnl,
+            )
+
+        # apply the trade to the simulated position for the symbol
+        pos = simulated_positions.get(symbol)
+        if pos is None:
+            # opening new position
             side = PositionSide.LONG if qty > 0 else PositionSide.SHORT
-            position = Position(
+            new_pos = Position(
                 symbol=symbol,
                 side=side,
                 quantity=abs(qty),
                 entry_price=price,
             )
-            self.positions[symbol] = position
-
+            simulated_positions[symbol] = new_pos
         else:
-            # Mise à jour via la logique encapsulée dans Position
-            new_position, realized_pnl_delta = position.update(qty, price)
-
+            new_position, _realized_delta = pos.update(qty, price)
             if new_position is None:
-                # Position complètement fermée
-                del self.positions[symbol]
+                # closed
+                del simulated_positions[symbol]
             else:
-                self.positions[symbol] = new_position
+                simulated_positions[symbol] = new_position
 
-        self.cash -= qty * price + fee
+        # --- compute equity after the simulated trade ---
+        equity_after = cash_after
+        for s, p in simulated_positions.items():
+            p_price = price_by_symbol.get(s, p.entry_price)
+            if p.side == PositionSide.LONG:
+                equity_after += p_price * p.quantity
+            else:
+                equity_after += -p_price * abs(p.quantity)
+
+        # --- check maintenance margin per short position in the simulated state ---
+        for s, p in simulated_positions.items():
+            if p.side == PositionSide.SHORT:
+                p_price = price_by_symbol.get(s, p.entry_price)
+                notional = p_price * abs(p.quantity)
+                required_maint = notional * maintenance_margin
+                if equity_after < required_maint:
+                    return False, (
+                        f"Would breach maintenance margin for {s}: "
+                    )
+
+        # All good: commit the simulated state to real state
+        self.cash = cash_after
+        # replace positions with simulated positions (they are fresh objects)
+        self.positions = simulated_positions
+
+        return True, None
 
     def build_snapshot(self, price_by_symbol: dict, timestamp: str) -> PortfolioSnapshot:
         """
