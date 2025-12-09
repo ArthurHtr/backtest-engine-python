@@ -11,13 +11,13 @@ class DataProvider:
     """Générateur de données de marché simulées.
 
     - Prix démarrent à 100 pour chaque symbole.
-    - Pas fixe contrôlé par `timeframe` ("1m", "1h", "1d").
+    - Pas fixe contrôlé par `timeframe`.
     - Volumes simulés avec une distribution log-normale simple, ajustée au pas.
     """
 
     def __init__(
         self,
-        seed: int | None = None,
+        seed: int = 833,
         base_price: float = 100.0,
         drift: float = 0.1,
         volatility: float = 0.02,
@@ -34,8 +34,12 @@ class DataProvider:
     def _delta_from_timeframe(self, timeframe: str) -> timedelta:
         mapping = {
             "1m": timedelta(minutes=1),
+            "5m": timedelta(minutes=5),
+            "15m": timedelta(minutes=15),
+            "30m": timedelta(minutes=30),
             "1h": timedelta(hours=1),
             "1d": timedelta(days=1),
+            "1w": timedelta(weeks=1),
         }
         if timeframe not in mapping:
             raise ValueError(f"Unsupported timeframe '{timeframe}', use one of: {', '.join(mapping)}")
@@ -46,6 +50,19 @@ class DataProvider:
             return max(1, int(self.base_daily_volume / (24 * 60)))
         if timeframe == "1h":
             return max(1, int(self.base_daily_volume / 24))
+        if timeframe == "1d":
+            return self.base_daily_volume
+        if timeframe == "1w":
+            return self.base_daily_volume * 7
+        
+        # Pour les autres (5m, 15m, 30m), on approxime linéairement
+        minutes_per_step = int(timeframe[:-1]) if timeframe[-1] == 'm' else 0
+        if minutes_per_step > 0:
+            return max(1, int(self.base_daily_volume * minutes_per_step / (24 * 60)))
+        hours_per_step = int(timeframe[:-1]) if timeframe[-1] == 'h' else 0
+        if hours_per_step > 0:
+            return max(1, int(self.base_daily_volume * hours_per_step / 24))
+        
         return self.base_daily_volume
 
     def get_candles(self, symbol: str, start: str, end: str, timeframe: str = "1d") -> List[Candle]:
