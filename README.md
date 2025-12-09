@@ -1,181 +1,169 @@
-# backtest-engine-python
+# trade_tp — Backtest engine & broker simulator
 
-Un moteur de backtest Python léger pour prototyper et tester des stratégies
-intraday sur des séries de bougies (candles). Ce README est pensé pour être
-instructif : il explique les concepts principaux, fournit des exemples et des
-repères pour debugger et étendre le projet.
+`trade_tp` est une petite librairie Python pour prototyper et exécuter des
+backtests de stratégies de trading sur des séries de bougies (candles).
 
 ## Vue d'ensemble
 
-Principaux composants :
-- `src/trade_tp/engine.py` : boucle de backtest (BacktestEngine).
-- `src/trade_tp/simple_broker/` : broker simulé, `PortfolioState` et les
-  modèles (trade, position, candle, order_intent, portfolio_snapshot).
-- `src/trade_tp/sdk/` : fournisseur de données, exporteurs, utilitaires.
-- `run_backtest.py` : script d'exécution et génération du rapport
-  `backtest_analysis.txt`.
+- Moteur de backtest multi-symboles (`BacktestEngine`).
+- Broker simulé (`BacktestBroker`) qui valide les `OrderIntent` et applique
+  les `Trade` au `Portfolio` (cash, positions, frais, PnL réalisé).
+- Modules utilitaires pour générer des données simulées et produire des
+  rapports simples.
 
-Objectifs design
-- Simplicité et transparence : code lisible pour comprendre l'impact d'une
-  stratégie sur le portefeuille.
-- Séparation des responsabilités : la stratégie produit des `OrderIntent`, le
-  broker valide et construit le `Trade`, le `PortfolioState` applique les
-  conséquences financières.
+Le code se trouve sous le package `trade_tp` (répertoire `src/trade_tp`).
 
-## Concepts financiers expliqués (pour ce projet)
+## Installation
 
-- Equity (Net Asset Value) :
-  equity = cash + somme(market_value des positions)
-  - Long : market_value = price * quantity
-  - Short : market_value = - price * abs(quantity)
-  Cette définition est utilisée partout (reporting et validations).
+Prérequis : Python 3.10+
 
-- Frais (fee_rate) : fraction du notional (price * quantity) appliquée à
-  chaque trade. Par exemple fee_rate = 0.002 => frais = 0.2% du notional.
-
-- Margin requirements :
-  - `margin_requirement` (initial) : fraction du notional exigée pour
-    ouvrir une position short.
-  - `maintenance_margin` : fraction du notional qui doit être couverte par
-    l'equity pour conserver un short. Si l'equity simulée tombe en dessous
-    du niveau de maintenance pour une position short, la logique peut refuser
-    l'ordre ou initier une liquidation.
-
-Pourquoi deux étapes de validation ?
-- Le broker réalise des validations pré-trade (cash, marge initiale) pour
-  filtrer les ordres impossibles rapidement.
-- Le `PortfolioState.apply_trade` simule le post-trade et effectue la
-  validation finale de maintenance margin. Cette simulation évite d'exécuter
-  puis d'annuler un trade (problème de "double frais").
-
-## Installation rapide
-
-Prérequis : Python 3.10+.
-
-1. Créer et activer un virtualenv :
+Installation en développement :
 
 ```bash
-python -m venv venv
-source venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
 ```
 
-2. Installer les dépendances minimales (si `requirements.txt` existe) :
+Installation pour utilisation :
 
 ```bash
-pip install -r requirements.txt
+pip install .
 ```
 
-Sinon installer au minimum :
+## Concepts clés et API
 
-```bash
-pip install tqdm
-```
+**StrategyContext** : fourni à la stratégie à chaque barre (bar). Champs et aides :
+- `candles`: mapping `symbol -> Candle` pour le timestamp courant.
+- `portfolio_snapshot`: `PortfolioSnapshot` (état du portefeuille avant exécution des intents).
+- `past_candles`: mapping `symbol -> list[Candle]` (historique incluant la barre courante).
+- `current_timestamp()`: retourne le timestamp courant.
+- `get_history(symbol, limit=None)`: renvoie des `Candle` historiques.
+- `get_series(symbol, field, limit=None)`: renvoie une liste de valeurs numériques (ex: `close`).
 
-## Lancer un backtest (exemple)
+Les stratégies héritent de `BaseStrategy` et implémentent `on_bar(context: StrategyContext)`.
 
-1. Préparer vos séries de candles (format attendu = liste de `Candle` par
-   symbole). Des exemples de stratégies `buy_and_hold_strategy.py` et
-   `moving_average_crossover_strategy.py` sont fournis.
+**OrderIntent** : objet retourné par la stratégie pour demander l'exécution d'un ordre.
+- Champs principaux : `symbol` (str), `side` (`Side.BUY`/`Side.SELL`), `quantity` (float positive), `order_type` (ex: `MARKET`), `limit_price`.
+- Convention : la stratégie fournit une quantité positive; le broker interprète `side` pour construire le `Trade`.
 
-2. Lancer :
+**PortfolioSnapshot** : vue immuable de l'état du portefeuille à un timestamp.
+- Champs : `timestamp`, `cash`, `equity`, `positions` (liste de `Position`).
+- `positions` contient des objets `Position` avec `symbol`, `side` (LONG/SHORT), `quantity`, `entry_price`, `realized_pnl`.
 
-```bash
-venv/bin/python run_backtest.py
-```
+Entrées / sorties du runner
+- `BacktestEngine.run(candles_by_symbol)`
+  - Entrée : `candles_by_symbol` = `dict[str, list[Candle]]` (liste ordonnée par timestamp pour chaque symbole).
+  - Sortie : `List[dict]` où chaque dict contient :
+	- `timestamp`, `candles`, `snapshot_before`, `snapshot_after`, `order_intents`, `execution_details`.
 
-3. Résultat : `backtest_analysis.txt` sera généré avec un log détaillé par
-   timestamp (candles, snapshot before/after, intents, execution details).
+## Exemple d'utilisation
 
-## Exemple minimal de stratégie
-
-La stratégie doit hériter de `BaseStrategy` et implémenter `on_bar(context)` :
+Voici deux stratégies d'exemple et une façon simple de lancer un backtest via `run_backtest`.
 
 ```python
-from src.trade_tp.simple_broker.models.order_intent import OrderIntent, Side
+from typing import List
 
-class MyStrategy(BaseStrategy):
-    def on_bar(self, context):
-        # Context contient candles, snapshot, past_candles
-        # Exemple : acheter 10 actions de AAPL
-        return [OrderIntent(symbol="AAPL", side=Side.BUY, quantity=10)]
+from trade_tp.backtest_engine.models.strategy import BaseStrategy, StrategyContext
+from trade_tp.backtest_engine.models.order_intent import OrderIntent
+from trade_tp.backtest_engine.models.enums import Side
+
+
+# ------------------------------ stratégie utilisateur ------------------------------ #
+
+
+class MovingAverageCrossoverStrategy(BaseStrategy):
+	"""Simple MA crossover pour plusieurs symboles.
+
+	- Golden cross -> BUY
+	- Death cross  -> SELL
+	- Flatten au dernier timestamp.
+	"""
+
+	def __init__(
+		self,
+		short_window: int = 2,
+		long_window: int = 5,
+		quantity: float = 10.0,
+		last_timestamp=None,
+	):
+		self.short_window = short_window
+		self.long_window = long_window
+		self.quantity = quantity
+		self.last_timestamp = last_timestamp
+
+	def on_bar(self, context: StrategyContext) -> List[OrderIntent]:
+		order_intents: List[OrderIntent] = []
+
+		first_symbol = next(iter(context.candles))
+		timestamp = context.candles[first_symbol].timestamp
+
+		if self.last_timestamp is not None and timestamp == self.last_timestamp:
+			for symbol in context.candles.keys():
+				order_intents.append(
+					OrderIntent(symbol=symbol, side=Side.SELL, quantity=self.quantity)
+				)
+			return order_intents
+
+		max_window = max(self.short_window, self.long_window)
+
+		for symbol in context.candles.keys():
+			closes = context.get_series(symbol, "close", limit=max_window + 1)
+
+			if len(closes) < max_window + 1:
+				continue
+
+			short_ma_curr = sum(closes[-self.short_window:]) / self.short_window
+			short_ma_prev = sum(closes[-self.short_window - 1:-1]) / self.short_window
+
+			long_ma_curr = sum(closes[-self.long_window:]) / self.long_window
+			long_ma_prev = sum(closes[-self.long_window - 1:-1]) / self.long_window
+
+			diff_prev = short_ma_prev - long_ma_prev
+			diff_curr = short_ma_curr - long_ma_curr
+
+			if diff_prev <= 0 and diff_curr > 0:
+				order_intents.append(OrderIntent(symbol=symbol, side=Side.BUY, quantity=self.quantity))
+			elif diff_prev >= 0 and diff_curr < 0:
+				order_intents.append(OrderIntent(symbol=symbol, side=Side.SELL, quantity=self.quantity))
+
+		return order_intents
+
+
+
+# ------------------------------ exécution du backtest ------------------------------ #
+
+from trade_tp.runner import run_backtest
+
+if __name__ == "__main__":
+
+	result = run_backtest(
+		symbols=["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"],
+		start="2025-11-01T00:00:00",
+		end="2025-11-30T00:00:00",
+		timeframe="5m",
+
+		initial_cash=100_000.0,
+
+		strategy = MovingAverageCrossoverStrategy(
+			short_window=5,
+			long_window=20,
+			quantity=10.0,
+			last_timestamp="2025-11-30T00:00:00",
+		),
+
+		api_key=None,
+		base_url="",
+        
+		fee_rate=0.001,
+		margin_requirement=0.5,
+
+		save_results=True,
+	)
 ```
 
-Ordre attendu : `OrderIntent(symbol: str, side: Side, quantity: float)`.
-
-## Référence rapide des API internes
-
-- BacktestEngine (`src/trade_tp/engine.py`)
-  - run(candles_by_symbol) -> list[dict]
-    - Itère par timestamp, appelle la stratégie puis le broker, collecte les
-      snapshots et exécutions.
-
-- BacktestBroker (`src/trade_tp/simple_broker/broker.py`)
-  - get_snapshot(candles) -> PortfolioSnapshot
-  - process_bars(candles, order_intents) -> (snapshot_after, execution_details)
-    - `_validate_and_build_trade` : validations pré-trade conservatrices
-    - utilise `PortfolioState.apply_trade` pour la validation finale et le
-      commit
-
-- PortfolioState (`src/trade_tp/simple_broker/portfolio.py`)
-  - apply_trade(trade, price_by_symbol, maintenance_margin) -> (accepted, reason)
-  - build_snapshot(price_by_symbol, timestamp) -> PortfolioSnapshot
-
-## Debugging & pièges courants (avec actions concrètes)
-
-- Equity négative :
-  - Vérifier que l'equity affichée est bien cash + market value.
-  - Inspecter les frais facturés (fee_rate) et l'ordre d'application des
-    trades (les frais diminuent le cash immédiatement).
-  - Reproduire le scénario en imprimant l'entrée/sortie de
-    `BacktestBroker._validate_and_build_trade` et `PortfolioState.apply_trade`.
-
-- Orders exécutés puis annulés (double frais) :
-  - Chercher des appels où l'application d'un trade est effectuée avant la
-    vérification finale. La logique actuelle simule la validation finale dans
-    `apply_trade` pour éviter ce cas.
-
-- Reversals (traverser 0) :
-  - Les reversals sont supportés mais il est utile de tester les cas limites
-    (par ex. partial close + open short) avec de petits scénarios unitaires.
-
-## Tests recommandés
-
-- Ajouter des tests unitaires pour :
-  - `apply_trade` : buy/sell, close partial, close full, reverse, short that
-    breaches maintenance.
-  - `_validate_and_build_trade` du broker : insufficient cash, insufficient
-    margin, missing price.
-
-Utilisez `pytest` et créez un dossier `tests/`.
-
-## Configuration & paramètres
-
-Actuellement les paramètres (fee_rate, margin_requirement,
-maintenance_margin) sont passés à l'initialisation du broker. À améliorer :
-- ajouter un fichier de configuration (TOML/YAML) et une CLI pour lancer
-  différents scénarios.
-
-## Contribution
-
-- Fork -> branch -> PR. Merci d'ajouter des tests et d'expliquer les choix
-  dans la description de la PR.
-- Si vous modifiez la logique de marge ou d'équity, ajoutez des cas de test
-  pour éviter les régressions.
-
-## Pistes d'évolution
-
-- Ajouter un module d'analytics (drawdown, pnl per trade, sharpe, etc.).
-- Supporter exécution partielle et carnet d'ordres simulé (slippage, depth).
-- Exporter les résultats en CSV/JSON + visualisations simples.
+Remarque : `run_backtest` retourne un dictionnaire contenant `candles_logs` et `summary`.
 
 ## Licence
 
-À renseigner (ex: MIT). Si vous partagez ce dépôt, indiquez la licence souhaitée.
-
----
-
-Si tu veux, j'ajoute maintenant :
-- un exemple de test unitaire pour `apply_trade` ; ou
-- des exemples concrets de stratégies (MA crossover complet) ; ou
-- une configuration TOML et une petite CLI pour lancer des scénarios.
-Dis-moi ce que tu préfères et j'attaque.
+Ce projet est distribué sous licence MIT. Voir le fichier `LICENSE`.

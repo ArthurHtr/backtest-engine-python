@@ -139,7 +139,7 @@ def run_backtest(
     if save_results:
         logs_visualisation(
             candles_logs,
-            filepath=f"backtest_analysis/ba_{run_id}.txt",
+            filepath=f"backtest_analysis/bt_{run_id}.txt",
             summary=summary,
         )
 

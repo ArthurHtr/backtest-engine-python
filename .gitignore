@@ -6,6 +6,3 @@ __pycache__/
 
 #ignore les __init__.py
 __init__.py
-
-# ignore backtest reports
-backtest_analysis/
