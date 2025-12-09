@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 
-from src.trade_tp.backtest_engine.models.candle import Candle
-from src.trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
+from trade_tp.backtest_engine.models.candle import Candle
+from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
 
 
 class StrategyContext:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Optional, Tuple
-from src.trade_tp.backtest_engine.models.enums import PositionSide
+from trade_tp.backtest_engine.models.enums import PositionSide
 
 class Position:
     """

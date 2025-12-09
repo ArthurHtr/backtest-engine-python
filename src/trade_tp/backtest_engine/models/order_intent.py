@@ -1,5 +1,4 @@
-from src.trade_tp.backtest_engine.models.enums import Side
-import uuid
+from trade_tp.backtest_engine.models.enums import Side
 
 class OrderIntent:
         """

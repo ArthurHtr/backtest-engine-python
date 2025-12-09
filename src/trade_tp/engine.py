@@ -1,15 +1,12 @@
 from typing import Dict, List
-
-from src.trade_tp.backtest_engine.models.candle import Candle
-from src.trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
-
-from src.trade_tp.backtest_engine.broker import BacktestBroker
-from src.trade_tp.backtest_engine.models.strategy import BaseStrategy, StrategyContext
-
-from src.trade_tp.data.simulated_market_data.data_provider import DataProvider
 from tqdm import tqdm
 from collections import defaultdict
 
+from trade_tp.backtest_engine.models.candle import Candle
+from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
+from trade_tp.backtest_engine.broker import BacktestBroker
+from trade_tp.backtest_engine.models.strategy import BaseStrategy, StrategyContext
+from trade_tp.data.simulated_market_data.data_provider import DataProvider
 
 class BacktestEngine:
     """

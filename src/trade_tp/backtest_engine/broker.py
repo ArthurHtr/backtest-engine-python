@@ -1,12 +1,12 @@
 from typing import Dict, List, Tuple
 
-from src.trade_tp.backtest_engine.models.enums import PositionSide, Side
-from src.trade_tp.backtest_engine.models.candle import Candle
-from src.trade_tp.backtest_engine.models.trade import Trade
-from src.trade_tp.backtest_engine.models.order_intent import OrderIntent
-from src.trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
+from trade_tp.backtest_engine.models.enums import PositionSide, Side
+from trade_tp.backtest_engine.models.candle import Candle
+from trade_tp.backtest_engine.models.trade import Trade
+from trade_tp.backtest_engine.models.order_intent import OrderIntent
+from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
 
-from src.trade_tp.backtest_engine.portfolio import PortfolioState
+from trade_tp.backtest_engine.portfolio import PortfolioState
 
 
 class BacktestBroker:

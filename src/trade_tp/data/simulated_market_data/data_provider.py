@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from math import sqrt
 from typing import Dict, List
 
-from src.trade_tp.backtest_engine.models.candle import Candle
-from src.trade_tp.backtest_engine.models.symbol import Symbol
+from trade_tp.backtest_engine.models.candle import Candle
+from trade_tp.backtest_engine.models.symbol import Symbol
 
 
 class DataProvider:

@@ -1,9 +1,9 @@
 from typing import Dict, List, Optional
 
-from src.trade_tp.backtest_engine.models.trade import Trade
-from src.trade_tp.backtest_engine.models.enums import PositionSide
-from src.trade_tp.backtest_engine.models.positions import Position
-from src.trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
+from trade_tp.backtest_engine.models.trade import Trade
+from trade_tp.backtest_engine.models.enums import PositionSide
+from trade_tp.backtest_engine.models.positions import Position
+from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
 
 
 class PortfolioState:

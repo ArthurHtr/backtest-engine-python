@@ -1,5 +1,5 @@
 from typing import Any, Dict, List, Optional
-from .client import TradeTpClient
+from trade_tp.remote.client import TradeTpClient
 
 class ResultExporter:
     """Envoie directement les `candles_logs` (brut) vers l'API distante.

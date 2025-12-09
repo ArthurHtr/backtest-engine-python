@@ -1,21 +1,15 @@
 from __future__ import annotations
-
 from typing import Any, Dict, List, Optional
 import uuid
-from collections import defaultdict
 
-from .data.simulated_market_data.data_provider import DataProvider as SimDataProvider
-from .backtest_engine.broker import BacktestBroker
-from .engine import BacktestEngine
-from .backtest_engine.models.strategy import BaseStrategy
-from .remote.client import TradeTpClient
+from trade_tp.data.simulated_market_data.data_provider import DataProvider as SimDataProvider
+from trade_tp.backtest_engine.broker import BacktestBroker
+from trade_tp.engine import BacktestEngine
+from trade_tp.backtest_engine.models.strategy import BaseStrategy
+from trade_tp.remote.client import TradeTpClient
 
-# Delegated analysis & reporting utilities
-from .data.backtest_data_analysis.report import logs_visualisation
-from .data.backtest_data_analysis.analysis import compute_summary
-
-
-# (Reporting and aggregation logic moved to `data.backtest_data_analysis`)
+from trade_tp.data.backtest_data_analysis.report import logs_visualisation
+from trade_tp.data.backtest_data_analysis.analysis import compute_summary
 
 
 # ======================================================================

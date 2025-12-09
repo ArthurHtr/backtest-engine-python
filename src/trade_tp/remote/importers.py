@@ -1,7 +1,7 @@
 from typing import Dict, List
-from src.trade_tp.backtest_engine.models.candle import Candle
-from src.trade_tp.backtest_engine.models.symbol import Symbol
-from .client import TradeTpClient
+from trade_tp.backtest_engine.models.candle import Candle
+from trade_tp.backtest_engine.models.symbol import Symbol
+from trade_tp.remote.client import TradeTpClient
 
 class RemoteDataProvider:
     """Récupère les données via l'API distante."""

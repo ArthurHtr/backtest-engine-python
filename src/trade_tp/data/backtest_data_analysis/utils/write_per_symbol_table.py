@@ -1,6 +1,6 @@
 from typing import TextIO, Dict, Any, List
-from .write_header import _write_header
-from .write_line import write_line
+from trade_tp.data.backtest_data_analysis.utils.write_header import _write_header
+from trade_tp.data.backtest_data_analysis.utils.write_line import write_line 
 
 def _write_per_symbol_table(file: TextIO, summary: Dict[str, Any]) -> None:
     fees_by_symbol: Dict[str, float] = summary.get("fees_by_symbol") or {}

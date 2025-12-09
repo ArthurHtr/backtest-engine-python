@@ -1,4 +1,4 @@
-from src.trade_tp.backtest_engine.models.positions import Position
+from trade_tp.backtest_engine.models.positions import Position
 
 class PortfolioSnapshot:
     """

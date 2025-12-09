@@ -1,5 +1,3 @@
-import uuid
-
 class Trade:
     """
     Représente un trade effectivement exécuté par le broker.
