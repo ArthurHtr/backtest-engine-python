@@ -1,10 +1,10 @@
 from typing import Dict, List
 
-from src.trade_tp.simple_broker.models.candle import Candle
-from src.trade_tp.simple_broker.models.portfolio_snapshot import PortfolioSnapshot
+from src.trade_tp.backtest_engine.models.candle import Candle
+from src.trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
 
-from src.trade_tp.simple_broker.broker import BacktestBroker
-from src.trade_tp.simple_broker.models.strategy import BaseStrategy, StrategyContext
+from src.trade_tp.backtest_engine.broker import BacktestBroker
+from src.trade_tp.backtest_engine.models.strategy import BaseStrategy, StrategyContext
 
 from src.trade_tp.simulated_market_data.data_provider import DataProvider
 from tqdm import tqdm

@@ -1,14 +1,32 @@
 [tool.poetry]
-name = "my-backtest-lib"
+name = "trade-tp"
 version = "0.1.0"
-description = "A backtest engine for financial strategies."
+description = "Lightweight backtest engine + CLI for candle-based strategies."
 authors = ["Arthur Hottier"]
+license = "MIT"
+readme = "README.md"
+
+classifiers = [
+	"Development Status :: 3 - Alpha",
+	"Intended Audience :: Developers",
+	"License :: OSI Approved :: MIT License",
+	"Programming Language :: Python",
+	"Programming Language :: Python :: 3",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Topic :: Office/Business :: Financial",
+]
 
 [tool.poetry.dependencies]
-python = ">=3.8"
+python = ">=3.10,<4.0"
+tqdm = "^4.66"
+requests = "^2.32"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0"
+
+[tool.poetry.scripts]
+trade-tp = "trade_tp.cli:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
