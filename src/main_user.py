@@ -23,7 +23,9 @@ class SmaCrossStrategy(BaseStrategy):
 
         for symbol, candle in context.candles.items():
             # Récupération de l'historique (inclut la bougie courante)
-            history = context.past_candles.get(symbol, [])
+            # OPTIMISATION CRITIQUE : On utilise get_history avec une limite pour éviter
+            # de copier et d'itérer sur toute l'historique (complexité O(N^2) -> O(N))
+            history = context.get_history(symbol, limit=self.long_window)
             
             if len(history) < self.long_window:
                 continue
@@ -81,12 +83,12 @@ if __name__ == "__main__":
         end="2023-06-01T00:00:00",
         timeframe="15m", # Daily timeframe for SMA strategy
 
-        initial_cash=2_000.0,
+        initial_cash=1_000.0,
 
         strategy = SmaCrossStrategy(
             short_window=10,
             long_window=30,
-            quantity=10.0
+            quantity=1.0
         ),
 
         api_key="YOUR_API_KEY_HERE",
