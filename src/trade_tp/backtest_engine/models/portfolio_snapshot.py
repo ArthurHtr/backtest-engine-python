@@ -30,7 +30,6 @@ class PortfolioSnapshot:
                 "side": "LONG"|"SHORT",
                 "quantity": float,
                 "entry_price": float,
-                "realized_pnl": float,
             },
             ...
         }
@@ -40,7 +39,6 @@ class PortfolioSnapshot:
                 "side": position.side.name,
                 "quantity": position.quantity,
                 "entry_price": position.entry_price,
-                "realized_pnl": position.realized_pnl
             }
             for position in self.positions
         }

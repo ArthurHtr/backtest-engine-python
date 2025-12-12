@@ -73,7 +73,6 @@ class PortfolioState:
                 side=p.side,
                 quantity=p.quantity,
                 entry_price=p.entry_price,
-                realized_pnl=p.realized_pnl,
             )
 
         pos = simulated_positions.get(symbol)
@@ -82,7 +81,7 @@ class PortfolioState:
             new_pos = Position(symbol=symbol, side=side, quantity=abs(qty), entry_price=price)
             simulated_positions[symbol] = new_pos
         else:
-            new_position, _realized_delta = pos.update(qty, price)
+            new_position = pos.update(qty, price)
             if new_position is None:
                 del simulated_positions[symbol]
             else:
@@ -150,7 +149,6 @@ class PortfolioState:
                     side=position.side,
                     quantity=position.quantity,
                     entry_price=position.entry_price,
-                    realized_pnl=position.realized_pnl,
                 )
             )
 

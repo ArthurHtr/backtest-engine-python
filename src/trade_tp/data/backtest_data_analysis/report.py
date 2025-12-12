@@ -71,6 +71,14 @@ def logs_visualisation(candles_logs, filepath: str = "backtest_analysis.txt", su
             write_line(file, "Portfolio Before:")
             write_line(file, f"  Cash:   {snapshot_before.cash:,.2f}")
             write_line(file, f"  Equity: {snapshot_before.equity:,.2f}")
+            if hasattr(snapshot_before, 'unrealized_pnl'):
+                write_line(file, f"  Unrealized PnL: {snapshot_before.unrealized_pnl:,.2f}")
+            if hasattr(snapshot_before, 'total_realized_pnl'):
+                # Affichage du Net PnL (Realized - Fees) pour plus de clarté
+                net_realized = snapshot_before.total_realized_pnl - snapshot_before.total_fees
+                write_line(file, f"  Total Realized PnL (Gross): {snapshot_before.total_realized_pnl:,.2f}")
+                write_line(file, f"  Total Fees:                 {snapshot_before.total_fees:,.2f}")
+                write_line(file, f"  Net Realized PnL:           {net_realized:,.2f}")
 
             positions_before = snapshot_before.summarize_positions()
             if positions_before:
@@ -82,8 +90,7 @@ def logs_visualisation(candles_logs, filepath: str = "backtest_analysis.txt", su
                             f"    {symbol}: "
                             f"Side={details['side']}, "
                             f"Qty={details['quantity']}, "
-                            f"Entry={details['entry_price']:.2f}, "
-                            f"Realized PnL={details['realized_pnl']:.2f}"
+                            f"Entry={details['entry_price']:.2f}"
                         ),
                     )
             else:
@@ -151,6 +158,14 @@ def logs_visualisation(candles_logs, filepath: str = "backtest_analysis.txt", su
             write_line(file, "Portfolio After:")
             write_line(file, f"  Cash:   {snapshot_after.cash:,.2f}")
             write_line(file, f"  Equity: {snapshot_after.equity:,.2f}")
+            if hasattr(snapshot_after, 'unrealized_pnl'):
+                write_line(file, f"  Unrealized PnL: {snapshot_after.unrealized_pnl:,.2f}")
+            if hasattr(snapshot_after, 'total_realized_pnl'):
+                # Affichage du Net PnL (Realized - Fees) pour plus de clarté
+                net_realized = snapshot_after.total_realized_pnl - snapshot_after.total_fees
+                write_line(file, f"  Total Realized PnL (Gross): {snapshot_after.total_realized_pnl:,.2f}")
+                write_line(file, f"  Total Fees:                 {snapshot_after.total_fees:,.2f}")
+                write_line(file, f"  Net Realized PnL:           {net_realized:,.2f}")
 
             positions_after = snapshot_after.summarize_positions()
             if positions_after:
@@ -162,8 +177,7 @@ def logs_visualisation(candles_logs, filepath: str = "backtest_analysis.txt", su
                             f"    {symbol}: "
                             f"Side={details['side']}, "
                             f"Qty={details['quantity']}, "
-                            f"Entry={details['entry_price']:.2f}, "
-                            f"Realized PnL={details['realized_pnl']:.2f}"
+                            f"Entry={details['entry_price']:.2f}"
                         ),
                     )
             else:
