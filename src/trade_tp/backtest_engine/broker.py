@@ -269,6 +269,64 @@ class BacktestBroker:
         timestamp = next(iter(candles.values())).timestamp if candles else ""
         return self.portfolio.build_snapshot(price_by_symbol, timestamp)
 
+    def _check_margin_call(self, candles: Dict[str, Candle], price_by_symbol: Dict[str, float], timestamp: str) -> List[Dict]:
+        """
+        Vérifie si la marge de maintenance est respectée pour les positions short existantes.
+        Si ce n'est pas le cas, génère des trades de liquidation (achat pour fermer).
+        
+        AMÉLIORATION RÉALISME :
+        On utilise le prix 'High' de la bougie courante pour vérifier la liquidation des Shorts.
+        Si le High a touché le niveau de liquidation, on considère qu'on a été liquidé au pire moment,
+        même si le Close est redescendu ensuite.
+        """
+        liquidation_details = []
+        
+        # On itère sur une copie car on peut modifier le dictionnaire des positions
+        for symbol, position in list(self.portfolio.positions.items()):
+            if position.side == PositionSide.SHORT:
+                # 1. Déterminer le prix de référence pour le check de marge
+                # Pour un short, le pire cas est le High de la bougie.
+                candle = candles.get(symbol)
+                check_price = candle.high if candle else price_by_symbol.get(symbol, position.entry_price)
+                
+                # 2. Calcul de l'equity avec ce prix "pire cas"
+                # Note: Pour être très précis, il faudrait recalculer toute l'equity avec les prix High/Low
+                # de tous les actifs, mais ici on fait une approximation conservatrice locale.
+                current_equity = self._compute_equity({**price_by_symbol, symbol: check_price})
+                
+                notional = check_price * abs(position.quantity)
+                required_maint = notional * self.maintenance_margin
+                
+                # Si l'equity est inférieure à la marge requise pour CETTE position au prix HIGH
+                if current_equity < required_maint:
+                    # Liquidation de la position
+                    qty_to_close = abs(position.quantity) # Buy back everything
+                    
+                    # On liquide au prix du check (High) car c'est là que le stop-out a eu lieu
+                    exec_price = check_price 
+                    fee = (qty_to_close * exec_price) * self.fee_rate
+                    
+                    trade = Trade(
+                        symbol=symbol,
+                        quantity=qty_to_close, # Positive for BUY
+                        price=exec_price,
+                        fee=fee,
+                        timestamp=timestamp
+                    )
+                    
+                    # Force apply (check_margin=False) car c'est une liquidation forcée
+                    # On met à jour le price_by_symbol pour que l'apply_trade utilise le bon prix pour ce symbole
+                    self.portfolio.apply_trade(trade, {**price_by_symbol, symbol: exec_price}, self.maintenance_margin, check_margin=False)
+                    
+                    liquidation_details.append({
+                        "intent": None,
+                        "status": "liquidated",
+                        "trade": trade,
+                        "reason": f"Maintenance margin breach at High price {exec_price}"
+                    })
+                    
+        return liquidation_details
+
     def process_bars(self, candles: Dict[str, Candle], order_intents: List[OrderIntent]) -> Tuple[PortfolioSnapshot, List[Dict]]:
         """
         Traite un ensemble d'ordres pour la barre courante.
@@ -296,6 +354,11 @@ class BacktestBroker:
 
         price_by_symbol = self._build_price_map(candles)
         timestamp = next(iter(candles.values())).timestamp if candles else ""
+
+        # 1. Vérification des appels de marge sur les positions existantes
+        # On passe 'candles' pour pouvoir vérifier le High/Low
+        liquidation_details = self._check_margin_call(candles, price_by_symbol, timestamp)
+        execution_details.extend(liquidation_details)
 
         for intent in order_intents:
             detail, trade = self._validate_and_build_trade(intent, price_by_symbol=price_by_symbol, timestamp=timestamp)

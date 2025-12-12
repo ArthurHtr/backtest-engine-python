@@ -31,7 +31,7 @@ class PortfolioState:
         self.cash: float = initial_cash
         self.positions: Dict[str, Position] = {}
 
-    def apply_trade(self, trade: Trade, price_by_symbol: Dict[str, float], maintenance_margin: float) -> tuple[bool, Optional[str]]:
+    def apply_trade(self, trade: Trade, price_by_symbol: Dict[str, float], maintenance_margin: float, check_margin: bool = True) -> tuple[bool, Optional[str]]:
         """
         Applique un `Trade` au portefeuille après une simulation conservatrice.
 
@@ -51,6 +51,8 @@ class PortfolioState:
               de marché.
             maintenance_margin: fraction (ex: 0.25) utilisée pour décider si un
               short doit être maintenu.
+            check_margin: si True (défaut), vérifie la maintenance margin.
+              Si False, applique le trade sans vérification (utile pour liquidation).
 
         Returns:
             tuple(bool, Optional[str]): (accepted, reason). Si `accepted` est
@@ -96,13 +98,14 @@ class PortfolioState:
                 equity_after += -p_price * abs(p.quantity)
 
         # --- Vérification de la maintenance margin pour les shorts ---
-        for s, p in simulated_positions.items():
-            if p.side == PositionSide.SHORT:
-                p_price = price_by_symbol.get(s, p.entry_price)
-                notional = p_price * abs(p.quantity)
-                required_maint = notional * maintenance_margin
-                if equity_after < required_maint:
-                    return False, f"Would breach maintenance margin for {s}."
+        if check_margin:
+            for s, p in simulated_positions.items():
+                if p.side == PositionSide.SHORT:
+                    p_price = price_by_symbol.get(s, p.entry_price)
+                    notional = p_price * abs(p.quantity)
+                    required_maint = notional * maintenance_margin
+                    if equity_after < required_maint:
+                        return False, f"Would breach maintenance margin for {s}."
 
         # Commit : on remplace l'état réel par la simulation validée
         self.cash = cash_after

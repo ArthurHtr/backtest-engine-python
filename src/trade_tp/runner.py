@@ -51,10 +51,6 @@ def run_backtest(
 
     data_provider = SimDataProvider(
         seed=seed,
-        base_price=100.0,
-        drift=0.1,
-        volatility=0.02,
-        base_daily_volume=1_000_000,
     )
 
     candles_by_symbol = data_provider.get_multiple_candles(
@@ -139,7 +135,7 @@ def run_backtest(
     if save_results:
         logs_visualisation(
             candles_logs,
-            filepath=f"backtest_analysis/bt_{run_id}.txt",
+            filepath=f"src/backtest_analysis/bt_{run_id}.txt",
             summary=summary,
         )
 
