@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
 import uuid
+import os
 
 from trade_tp.data.simulated_market_data.data_provider import DataProvider as SimDataProvider
 from trade_tp.backtest_engine.broker import BacktestBroker
@@ -107,9 +108,11 @@ def run_backtest(
         }
 
         if save_results:
+            output_dir = "backtest_analysis"
+            os.makedirs(output_dir, exist_ok=True)
             logs_visualisation(
                 candles_logs,
-                filepath=f"backtest_analysis/ba_{run_id}.txt",
+                filepath=f"{output_dir}/ba_{run_id}.txt",
                 summary=summary,
             )
 
@@ -133,9 +136,11 @@ def run_backtest(
     )
 
     if save_results:
+        output_dir = "backtest_analysis"
+        os.makedirs(output_dir, exist_ok=True)
         logs_visualisation(
             candles_logs,
-            filepath=f"src/backtest_analysis/bt_{run_id}.txt",
+            filepath=f"{output_dir}/bt_{run_id}.txt",
             summary=summary,
         )
 
