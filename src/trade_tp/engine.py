@@ -6,7 +6,6 @@ from trade_tp.backtest_engine.models.candle import Candle
 from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
 from trade_tp.backtest_engine.broker import BacktestBroker
 from trade_tp.backtest_engine.models.strategy import BaseStrategy, StrategyContext
-from trade_tp.data.simulated_market_data.data_provider import DataProvider
 
 class BacktestEngine:
     """
@@ -27,10 +26,9 @@ class BacktestEngine:
         les détails d'exécution. Ce format est utilisé pour l'export/logging.
     """
 
-    def __init__(self, broker: BacktestBroker, strategy: BaseStrategy, data_provider: DataProvider):
+    def __init__(self, broker: BacktestBroker, strategy: BaseStrategy):
         self.broker = broker
         self.strategy = strategy
-        self.data_provider = data_provider
 
     def run(self, candles_by_symbol: Dict[str, List[Candle]]) -> List[dict]:
         """

@@ -22,9 +22,9 @@ class TradeTpClient:
             raise RuntimeError(f"Failed to fetch symbols: {resp.status_code} {resp.text}")
         return resp.json() or []
 
-    def get_candles(self, symbols: List[str], start: str, end: str) -> Dict[str, List[Dict[str, Any]]]:
+    def get_candles(self, symbols: List[str], start: str, end: str, timeframe: str = "1d") -> Dict[str, List[Dict[str, Any]]]:
         """Récupère les candles pour les symboles et période donnés."""
-        payload = {"symbols": symbols, "start": start, "end": end}
+        payload = {"symbols": symbols, "start": start, "end": end, "timeframe": timeframe}
         resp = self.session.post(self._full_url("/candles"), json=payload, timeout=self.timeout)
         if not resp.ok:
             raise RuntimeError(f"Failed to fetch candles: {resp.status_code} {resp.text}")

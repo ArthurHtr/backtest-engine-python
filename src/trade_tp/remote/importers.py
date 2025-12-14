@@ -27,8 +27,8 @@ class RemoteDataProvider:
                 continue
         return result
 
-    def get_multiple_candles(self, symbols: List[str], start: str, end: str) -> Dict[str, List[Candle]]:
-        raw = self.client.get_candles(symbols=symbols, start=start, end=end)
+    def get_multiple_candles(self, symbols: List[str], start: str, end: str, timeframe: str = "1d") -> Dict[str, List[Candle]]:
+        raw = self.client.get_candles(symbols=symbols, start=start, end=end, timeframe=timeframe)
         candles_by_symbol = {}
         for symbol, candle_dicts in raw.items():
             candles = []

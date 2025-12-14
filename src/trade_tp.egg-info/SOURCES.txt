@@ -32,10 +32,7 @@ src/trade_tp/data/backtest_data_analysis/utils/write_key_value.py
 src/trade_tp/data/backtest_data_analysis/utils/write_line.py
 src/trade_tp/data/backtest_data_analysis/utils/write_per_symbol_table.py
 src/trade_tp/data/backtest_data_analysis/utils/write_summary_header.py
-src/trade_tp/data/simulated_market_data/__init__.py
-src/trade_tp/data/simulated_market_data/data_provider.py
 src/trade_tp/remote/__init__.py
 src/trade_tp/remote/client.py
 src/trade_tp/remote/exporters.py
 src/trade_tp/remote/importers.py
-src/trade_tp/remote/runner.py
