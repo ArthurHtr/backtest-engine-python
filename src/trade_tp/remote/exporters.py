@@ -5,6 +5,7 @@ from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
 from trade_tp.backtest_engine.models.positions import Position
 from trade_tp.backtest_engine.models.order_intent import OrderIntent
 from trade_tp.backtest_engine.models.enums import Side, PositionSide
+from trade_tp.backtest_engine.models.trade import Trade
 
 class ResultExporter:
     """Envoie directement les `candles_logs` (brut) vers l'API distante.
@@ -57,6 +58,15 @@ class ResultExporter:
                 "order_type": obj.order_type,
                 "limit_price": obj.limit_price,
                 "order_id": obj.order_id
+            }
+        elif isinstance(obj, Trade):
+            return {
+                "symbol": obj.symbol,
+                "quantity": obj.quantity,
+                "price": obj.price,
+                "fee": obj.fee,
+                "timestamp": obj.timestamp,
+                "trade_id": obj.trade_id
             }
         elif isinstance(obj, (Side, PositionSide)):
             return obj.value
