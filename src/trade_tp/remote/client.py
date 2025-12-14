@@ -9,7 +9,7 @@ class TradeTpClient:
         self.api_key = api_key
         self.timeout = timeout
         self.session = requests.Session()
-        self.session.headers.update({"Authorization": f"Bearer {self.api_key}"})
+        self.session.headers.update({"x-api-key": self.api_key})
 
     def _full_url(self, path: str) -> str:
         return f"{self.base_url}{path}"
@@ -30,9 +30,16 @@ class TradeTpClient:
             raise RuntimeError(f"Failed to fetch candles: {resp.status_code} {resp.text}")
         return resp.json() or {}
 
-    def post_results(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def get_backtest_config(self, run_id: str) -> Dict[str, Any]:
+        """Récupère la configuration d'un backtest."""
+        resp = self.session.get(self._full_url(f"/backtests/{run_id}"), timeout=self.timeout)
+        if not resp.ok:
+            raise RuntimeError(f"Failed to fetch backtest config: {resp.status_code} {resp.text}")
+        return resp.json()
+
+    def post_results(self, run_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Envoie les résultats du backtest à l'API."""
-        resp = self.session.post(self._full_url("/backtests"), json=payload, timeout=self.timeout)
+        resp = self.session.post(self._full_url(f"/backtests/{run_id}/results"), json=payload, timeout=self.timeout)
         if not resp.ok:
             raise RuntimeError(f"Failed to export results: {resp.status_code} {resp.text}")
         return resp.json() or {}
