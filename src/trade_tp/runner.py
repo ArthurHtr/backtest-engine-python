@@ -164,7 +164,6 @@ def run_remote_backtest_job(
     3. Lance le backtest (téléchargement des données inclus).
     4. Envoie les résultats à l'API.
     """
-    print(f"--- Remote Backtest Job: {run_id} ---")
     
     # 1. Init Client & Fetch Config
     client = TradeTpClient(base_url=base_url, api_key=api_key)
@@ -173,13 +172,10 @@ def run_remote_backtest_job(
     except Exception as e:
         raise RuntimeError(f"Impossible de récupérer la configuration: {e}")
 
-    print(f"Configuration chargée: {config.get('symbols')}")
-
     # 2. Use provided strategy instance
     strategy_instance = strategy
 
     # 3. Run Backtest
-    print("Lancement du backtest...")
     try:
         # run_backtest va utiliser api_key/base_url pour fetcher les candles via le DataProvider
         results = run_backtest(
@@ -201,7 +197,6 @@ def run_remote_backtest_job(
         raise RuntimeError(f"Erreur pendant l'exécution du backtest: {e}")
 
     # 4. Upload Results
-    print("Envoi des résultats...")
     try:
         exporter = ResultExporter(client)
         
@@ -225,7 +220,6 @@ def run_remote_backtest_job(
             params=params_for_export, 
             candles_logs=results['candles_logs']
         )
-        print("Succès ! Résultats envoyés.")
     except Exception as e:
         raise RuntimeError(f"Erreur lors de l'envoi des résultats: {e}")
 
