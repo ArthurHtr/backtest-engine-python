@@ -203,7 +203,11 @@ def run_remote_backtest_job(
         # Reconstitution des params pour le log
         # On récupère le nom de la classe et ses attributs publics comme paramètres
         strategy_name = strategy_instance.__class__.__name__
-        strategy_params = {k: v for k, v in strategy_instance.__dict__.items() if not k.startswith('_')}
+        # Filter out internal state variables like 'prices' or large objects
+        strategy_params = {
+            k: v for k, v in strategy_instance.__dict__.items() 
+            if not k.startswith('_') and k != 'prices'
+        }
 
         params_for_export = {
             "symbols": config['symbols'],
