@@ -57,6 +57,10 @@ def run_backtest(
     # Use remote data provider
     data_provider = RemoteDataProvider(client)
 
+    # Fetch symbol info
+    symbol_objects = data_provider.get_symbols(symbols)
+    symbols_map = {s.symbol: s for s in symbol_objects}
+
     candles_by_symbol = data_provider.get_multiple_candles(
         symbols=symbols,
         start=start,
@@ -68,6 +72,7 @@ def run_backtest(
         initial_cash=initial_cash,
         fee_rate=fee_rate,
         margin_requirement=margin_requirement,
+        symbols_map=symbols_map,
     )
 
     engine = BacktestEngine(

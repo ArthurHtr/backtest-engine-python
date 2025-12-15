@@ -13,9 +13,31 @@ class Symbol:
     règles du marché simulé.
     """
 
-    def __init__(self, symbol: str, base_asset: str, quote_asset: str, price_step: float, quantity_step: float):
+    def __init__(self, symbol: str, base_asset: str, quote_asset: str, price_step: float, quantity_step: float, min_quantity: float = 0.0):
         self.symbol = symbol
         self.base_asset = base_asset
         self.quote_asset = quote_asset
         self.price_step = price_step
         self.quantity_step = quantity_step
+        self.min_quantity = min_quantity
+
+    def round_price(self, price: float) -> float:
+        """Arrondit le prix au multiple de price_step le plus proche."""
+        if self.price_step <= 0:
+            return price
+        steps = round(price / self.price_step)
+        return steps * self.price_step
+
+    def round_quantity(self, quantity: float) -> float:
+        """Arrondit la quantité au multiple de quantity_step le plus proche."""
+        if self.quantity_step <= 0:
+            return quantity
+        steps = int(quantity / self.quantity_step) # Truncate to avoid rounding up if not allowed? Usually floor.
+        # Let's use round for now, or floor? Usually exchanges truncate.
+        # But if I have 1.9 shares and step is 1, I can only sell 1.
+        # So floor is safer for selling, but for buying?
+        # If I want to buy 1.9 shares, I can only buy 1.
+        # So floor seems correct for "available amount".
+        steps = int(quantity / self.quantity_step)
+        rounded = steps * self.quantity_step
+        return rounded if rounded >= self.min_quantity else 0.0

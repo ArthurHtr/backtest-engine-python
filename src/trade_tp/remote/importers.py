@@ -21,6 +21,7 @@ class RemoteDataProvider:
                         quote_asset=entry.get("quote_asset", "USD"),
                         price_step=entry.get("price_step", 0.01),
                         quantity_step=entry.get("quantity_step", 1),
+                        min_quantity=entry.get("min_quantity", 0.0),
                     )
                 )
             except KeyError:

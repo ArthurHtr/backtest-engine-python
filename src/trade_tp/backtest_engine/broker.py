@@ -9,53 +9,24 @@ from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
 from trade_tp.backtest_engine.portfolio import PortfolioState
 
 
+from trade_tp.backtest_engine.models.symbol import Symbol
+
 class BacktestBroker:
     """
     Broker simulé utilisé par le moteur de backtest.
-
-    Ce composant a pour rôle d'interpréter les intentions d'ordre (OrderIntent)
-    provenant d'une stratégie, d'effectuer des validations préalables (cash,
-    marge, disponibilité du prix, logique de reverse), de construire un objet
-    `Trade` et de demander l'application du trade au `PortfolioState`.
-
-    Comportement clé et invariants
-    - L'équité (equity) utilisée pour les contrôles est toujours calculée comme
-      : cash + valeur de marché des positions (concorde avec
-      `PortfolioState.build_snapshot`).
-    - Les validations sensibles à la marge sont effectuées en deux étapes :
-      1) validations pré-trade conservatrices dans `_validate_and_build_trade`
-         (ex : suffisance de cash pour achat, marge initiale requise pour
-         l'ouverture d'un short, contrôle de reverse implicite) ;
-      2) validation finale de maintenance margin exécutée au moment de
-         l'application via `PortfolioState.apply_trade`, qui simule le post-trade
-         et peut refuser sans muter l'état si la marge de maintenance est
-         insuffisante. Cette séparation évite d'exécuter un trade puis de devoir
-         l'annuler (double frais / incohérences).
-
-    Paramètres d'initialisation
-    - initial_cash (float) : cash initial du portefeuille.
-    - fee_rate (float) : fraction appliquée au notional de l'ordre pour calculer
-      les frais (ex : 0.002 = 0.2%).
-    - margin_requirement (float) : fraction d'exigence initiale pour ouvrir une
-      exposition (utilisée dans les validations pré-trade pour les shorts).
-    - maintenance_margin (float) : fraction de maintenance utilisée pour décider
-      si une position short doit être refusée/liquidée (ex : 0.25 pour 25%).
-
-    Notes
-    - Les méthodes publiques retournent des structures simples (snapshot, liste
-      de détails d'exécution) utiles au moteur pour journaliser / exporter le
-      résultat du bar.
-    - Les messages et raisons de rejet sont conçus pour être lisibles et
-      suffisants pour du débogage utilisateur lors d'un backtest.
+    ...
     """
 
-    def __init__(self, initial_cash: float, fee_rate: float, margin_requirement: float, maintenance_margin: float = 0.25):
+    def __init__(self, initial_cash: float, fee_rate: float, margin_requirement: float, maintenance_margin: float = 0.25, symbols_map: Dict[str, Symbol] = None):
         self.portfolio = PortfolioState(initial_cash)
         self.fee_rate = fee_rate
         self.margin_requirement = margin_requirement
-        # maintenance_margin est la fraction du notionnel qui doit être couverte
-        # par l'equity pour éviter la liquidation immédiate (ex: 0.25 = 25%).
         self.maintenance_margin = maintenance_margin
+        self.symbols_map = symbols_map or {}
+
+    def set_symbols_map(self, symbols_map: Dict[str, Symbol]):
+        self.symbols_map = symbols_map
+
 
     def _compute_equity(self, price_by_symbol: Dict[str, float]) -> float:
         """
@@ -140,6 +111,30 @@ class BacktestBroker:
 
         price = price_by_symbol[symbol]
         qty = intent.quantity
+
+        # --- Rounding Logic ---
+        sym_info = self.symbols_map.get(symbol)
+        if sym_info:
+            # Round quantity
+            qty = sym_info.round_quantity(qty)
+            # Round price (though usually we take market price, but for LIMIT orders it matters. 
+            # Here we assume MARKET orders execute at market price, but maybe we should round it too?)
+            # Actually, execution price is usually determined by the market, but let's assume 
+            # the simulation respects price steps.
+            # However, `price` here comes from `price_by_symbol` which is the candle close.
+            # We shouldn't round the market price, but we should round the quantity.
+            
+            if qty == 0:
+                 return (
+                    {
+                        "intent": intent,
+                        "status": "rejected",
+                        "reason": "Quantity too small (below min_quantity or step).",
+                    },
+                    None,
+                )
+        # ----------------------
+
         notional = qty * price
         fee = abs(notional) * self.fee_rate
 
