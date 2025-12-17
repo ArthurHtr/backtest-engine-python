@@ -18,7 +18,7 @@ from trade_tp.data.backtest_data_analysis.analysis import compute_summary
 # Backtest runner
 # ======================================================================
 
-def run_backtest(
+def run(
     symbols: List[str],
     start: str,
     end: str,
@@ -47,7 +47,7 @@ def run_backtest(
         run_id = uuid.uuid4().hex
 
     if not api_key:
-        raise ValueError("api_key is required for remote backtest. Local simulation is no longer supported.")
+        raise ValueError("api_key is required for remote backtest. Local simulation is not supported.")
 
     client = TradeTpClient(
         base_url=base_url,
@@ -154,7 +154,7 @@ def run_backtest(
     return {"candles_logs": candles_logs, "summary": summary}
 
 
-def run_remote_backtest_job(
+def run_backtest(
     run_id: str,
     api_key: str,
     strategy: BaseStrategy,
@@ -184,7 +184,7 @@ def run_remote_backtest_job(
     # 3. Run Backtest
     try:
         # run_backtest va utiliser api_key/base_url pour fetcher les candles via le DataProvider
-        results = run_backtest(
+        results = run(
             symbols=config['symbols'],
             start=config['start'],
             end=config['end'],
