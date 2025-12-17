@@ -159,7 +159,8 @@ def run_remote_backtest_job(
     api_key: str,
     strategy: BaseStrategy,
     base_url: str = "http://localhost:3000/api",
-    save_local: bool = False
+    save_local: bool = False,
+    export_to_server: bool = True
 ) -> Dict[str, Any]:
     """
     Exécute un backtest configuré à distance.
@@ -167,7 +168,7 @@ def run_remote_backtest_job(
     1. Récupère la configuration depuis l'API (via run_id).
     2. Utilise l'instance de stratégie fournie.
     3. Lance le backtest (téléchargement des données inclus).
-    4. Envoie les résultats à l'API.
+    4. Envoie les résultats à l'API (si export_to_server=True).
     """
     
     # 1. Init Client & Fetch Config
@@ -202,34 +203,50 @@ def run_remote_backtest_job(
         raise RuntimeError(f"Erreur pendant l'exécution du backtest: {e}")
 
     # 4. Upload Results
-    try:
-        exporter = ResultExporter(client)
-        
-        # Reconstitution des params pour le log
-        # On récupère le nom de la classe et ses attributs publics comme paramètres
-        strategy_name = strategy_instance.__class__.__name__
-        # Filter out internal state variables like 'prices' or large objects
-        strategy_params = {
-            k: v for k, v in strategy_instance.__dict__.items() 
-            if not k.startswith('_') and k != 'prices'
-        }
+    if export_to_server:
+        try:
+            exporter = ResultExporter(client)
+            
+            # Reconstitution des params pour le log
+            # On récupère le nom de la classe et ses attributs publics comme paramètres
+            strategy_name = strategy_instance.__class__.__name__
+            # Filter out internal state variables like 'prices' or large objects
+            strategy_params = {
+                k: v for k, v in strategy_instance.__dict__.items() 
+                if not k.startswith('_') and k != 'prices'
+            }
 
-        params_for_export = {
-            "symbols": config['symbols'],
-            "start": config['start'],
-            "end": config['end'],
-            "timeframe": config['timeframe'],
-            "initial_cash": config['initialCash'],
-            "strategy": strategy_name,
-            "strategy_params": strategy_params
-        }
-        
-        exporter.export(
-            run_id=run_id, 
-            params=params_for_export, 
-            candles_logs=results['candles_logs']
-        )
-    except Exception as e:
-        raise RuntimeError(f"Erreur lors de l'envoi des résultats: {e}")
+            params_for_export = {
+                "symbols": config['symbols'],
+                "start": config['start'],
+                "end": config['end'],
+                "timeframe": config['timeframe'],
+                "initial_cash": config['initialCash'],
+                "strategy": strategy_name,
+                "strategy_params": strategy_params
+            }
+            
+            exporter.export(
+                run_id=run_id, 
+                params=params_for_export, 
+                candles_logs=results['candles_logs']
+            )
+        except Exception as e:
+            raise RuntimeError(f"Erreur lors de l'envoi des résultats: {e}")
+
+    # 5. Compute & Attach Quick Metrics
+    # Calculate total executed trades
+    total_trades = sum(
+        1 for log in results['candles_logs']
+        for detail in log.get("execution_details", []) or []
+        if detail.get("trade")
+    )
+
+    results['metrics'] = {
+        "total_return": results['summary']['pnl_pct'],
+        "final_equity": results['summary']['final_equity'],
+        "total_fees": results['summary']['total_fees'],
+        "total_trades": total_trades
+    }
 
     return results
