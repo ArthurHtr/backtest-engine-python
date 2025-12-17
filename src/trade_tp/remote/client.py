@@ -4,7 +4,7 @@ import requests
 class TradeTpClient:
     """Client HTTP pour l'API distante avec auth Bearer."""
 
-    def __init__(self, base_url: str, api_key: str, timeout: float = 10.0):
+    def __init__(self, base_url: str, api_key: str, timeout: float = 60.0):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout = timeout
