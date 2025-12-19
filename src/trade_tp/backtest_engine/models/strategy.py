@@ -16,11 +16,11 @@ class StrategyContext:
     - portfolio_snapshot: PortfolioSnapshot before applying intents
     - past_candles: mapping symbol -> list[Candle] containing historical candles up to and including current bar
 
-    Helpers are provided to simplify common indicator computations (get_history, get_series, sma, ema).
+    Helpers are provided to simplify common indicator computations (get_history, get_series).
     """
 
     def __init__(self, candles: Dict[str, Candle], portfolio_snapshot: PortfolioSnapshot, past_candles: Optional[Dict[str, List[Candle]]] = None):
-        self.candles: Dict[str, Candle] = candles
+        self.candle: Dict[str, Candle] = candles
         self.portfolio_snapshot: PortfolioSnapshot = portfolio_snapshot
         self.past_candles: Dict[str, List[Candle]] = past_candles
 
@@ -29,7 +29,7 @@ class StrategyContext:
 
     def current_timestamp(self) -> Optional[str]:
         """Return the timestamp of the current candles (assumes all current candles share the same ts)."""
-        return next(iter(self.candles.values())).timestamp
+        return next(iter(self.candle.values())).timestamp
 
     def _get_history(self, symbol: str, limit: Optional[int] = None) -> List[Candle]:
         """Return historical candles for symbol up to the current bar.
