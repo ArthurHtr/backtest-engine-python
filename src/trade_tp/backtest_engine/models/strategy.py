@@ -3,6 +3,8 @@ from typing import Dict, List, Optional
 
 from trade_tp.backtest_engine.models.candle import Candle
 from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
+from trade_tp.backtest_engine.models.positions import Position
+from trade_tp.backtest_engine.models.enums import PositionSide
 
 
 class StrategyContext:
@@ -22,14 +24,14 @@ class StrategyContext:
         self.portfolio_snapshot: PortfolioSnapshot = portfolio_snapshot
         self.past_candles: Dict[str, List[Candle]] = past_candles
 
-        # small cache for per-context computed indicators
+        # small cache for per-context computed indicators for exemple
         self._cache = {}
 
     def current_timestamp(self) -> Optional[str]:
         """Return the timestamp of the current candles (assumes all current candles share the same ts)."""
         return next(iter(self.candles.values())).timestamp
 
-    def get_history(self, symbol: str, limit: Optional[int] = None) -> List[Candle]:
+    def _get_history(self, symbol: str, limit: Optional[int] = None) -> List[Candle]:
         """Return historical candles for symbol up to the current bar.
         If limit is provided, returns at most the last `limit` candles.
         """
@@ -38,8 +40,37 @@ class StrategyContext:
 
     def get_series(self, symbol: str, field: str, limit: Optional[int] = None) -> List[float]:
         """Return a list of numeric values for a candle field."""
-        series = [getattr(c, field) for c in self.get_history(symbol, limit)]
+        series = [getattr(c, field) for c in self._get_history(symbol, limit)]
         return series
+
+    @property
+    def cash(self) -> float:
+        """Shortcut to access available cash."""
+        return self.portfolio_snapshot.cash
+
+    @property
+    def equity(self) -> float:
+        """Shortcut to access portfolio equity."""
+        return self.portfolio_snapshot.equity
+
+    def get_position(self, symbol: str) -> Optional[Position]:
+        """
+        Return the current position for a symbol, or None if no position exists.
+        """
+        for p in self.portfolio_snapshot.positions:
+            if p.symbol == symbol:
+                return p
+        return None
+
+    def is_long(self, symbol: str) -> bool:
+        """Return True if there is a LONG position on the symbol."""
+        pos = self.get_position(symbol)
+        return pos is not None and pos.side == PositionSide.LONG
+
+    def is_short(self, symbol: str) -> bool:
+        """Return True if there is a SHORT position on the symbol."""
+        pos = self.get_position(symbol)
+        return pos is not None and pos.side == PositionSide.SHORT
 
 
 class BaseStrategy(ABC):
