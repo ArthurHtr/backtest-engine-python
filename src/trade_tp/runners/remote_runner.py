@@ -10,7 +10,8 @@ def run_remote_backtest(
     strategy: BaseStrategy,
     base_url: str = "http://192.168.1.66:3000/api",
     save_local: bool = False,
-    export_to_server: bool = True
+    export_to_server: bool = True,
+    verbose: bool = True
 ) -> Dict[str, Any]:
     """
     Exécute un backtest configuré à distance.
@@ -47,7 +48,8 @@ def run_remote_backtest(
             margin_requirement=float(config['marginRequirement']),
             save_results=save_local,
             seed=config.get('seed'),
-            run_id=run_id
+            run_id=run_id,
+            verbose=verbose
         )
     except Exception as e:
         raise RuntimeError(f"Erreur pendant l'exécution du backtest: {e}")

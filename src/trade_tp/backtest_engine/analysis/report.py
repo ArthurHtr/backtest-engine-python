@@ -13,7 +13,8 @@ def export_backtest_analysis(
     candles_logs: List[Dict[str, Any]], 
     run_id: str, 
     base_dir: str = "backtest_analysis", 
-    summary: Optional[Dict[str, Any]] = None
+    summary: Optional[Dict[str, Any]] = None,
+    verbose: bool = True
 ) -> None:
     """
     Export a structured backtest analysis to a dedicated folder.
@@ -32,23 +33,25 @@ def export_backtest_analysis(
     os.makedirs(run_dir, exist_ok=True)
     
     # 1. Summary File
-    _write_summary_file(os.path.join(run_dir, "summary.txt"), summary)
+    _write_summary_file(os.path.join(run_dir, "summary.txt"), summary, verbose=verbose)
     
     # 2. Full Log File
-    _write_full_log_file(os.path.join(run_dir, "full_log.txt"), candles_logs)
+    _write_full_log_file(os.path.join(run_dir, "full_log.txt"), candles_logs, verbose=verbose)
     
     # 3. Trades CSV
-    _write_trades_csv(os.path.join(run_dir, "trades.csv"), candles_logs)
+    _write_trades_csv(os.path.join(run_dir, "trades.csv"), candles_logs, verbose=verbose)
     
     # 4. Equity CSV
-    _write_equity_csv(os.path.join(run_dir, "equity.csv"), candles_logs)
+    _write_equity_csv(os.path.join(run_dir, "equity.csv"), candles_logs, verbose=verbose)
 
     # 5. Order Intents CSV
-    _write_order_intents_csv(os.path.join(run_dir, "order_intents.csv"), candles_logs)
+    _write_order_intents_csv(os.path.join(run_dir, "order_intents.csv"), candles_logs, verbose=verbose)
 
 
 
-def _write_summary_file(filepath: str, summary: Optional[Dict[str, Any]]) -> None:
+def _write_summary_file(filepath: str, summary: Optional[Dict[str, Any]], verbose: bool = True) -> None:
+    if not verbose:
+        return
     with open(filepath, "w") as file:
         write_header(file, "Backtest Summary")
         write_line(file)
@@ -60,7 +63,9 @@ def _write_summary_file(filepath: str, summary: Optional[Dict[str, Any]]) -> Non
         else:
             write_line(file, "No summary available.")
 
-def _write_full_log_file(filepath: str, candles_logs: List[Dict[str, Any]]) -> None:
+def _write_full_log_file(filepath: str, candles_logs: List[Dict[str, Any]], verbose: bool = True) -> None:
+    if not verbose:
+        return
     with open(filepath, "w") as file:
         write_header(file, "Detailed Backtest Logs")
         
@@ -190,7 +195,9 @@ def _write_full_log_file(filepath: str, candles_logs: List[Dict[str, Any]]) -> N
 
             write_line(file)
 
-def _write_trades_csv(filepath: str, candles_logs: List[Dict[str, Any]]) -> None:
+def _write_trades_csv(filepath: str, candles_logs: List[Dict[str, Any]], verbose: bool = True) -> None:
+    if not verbose:
+        return
     trades = []
     for log in candles_logs:
         timestamp = log.get("timestamp")
@@ -221,7 +228,9 @@ def _write_trades_csv(filepath: str, candles_logs: List[Dict[str, Any]]) -> None
         for trade in trades:
             writer.writerow(trade)
 
-def _write_equity_csv(filepath: str, candles_logs: List[Dict[str, Any]]) -> None:
+def _write_equity_csv(filepath: str, candles_logs: List[Dict[str, Any]], verbose: bool = True) -> None:
+    if not verbose:
+        return
     with open(filepath, "w", newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(["timestamp", "equity", "cash", "unrealized_pnl", "realized_pnl", "fees"])
@@ -236,7 +245,9 @@ def _write_equity_csv(filepath: str, candles_logs: List[Dict[str, Any]]) -> None
             
             writer.writerow([ts, snap.equity, snap.cash, unrealized, realized, fees])
 
-def _write_order_intents_csv(filepath: str, candles_logs: List[Dict[str, Any]]) -> None:
+def _write_order_intents_csv(filepath: str, candles_logs: List[Dict[str, Any]], verbose: bool = True) -> None:
+    if not verbose:
+        return
     intents_data = []
     for log in candles_logs:
         timestamp = log.get("timestamp")

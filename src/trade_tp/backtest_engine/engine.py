@@ -27,9 +27,10 @@ class BacktestEngine:
         les détails d'exécution. Ce format est utilisé pour l'export/logging.
     """
 
-    def __init__(self, broker: BacktestBroker, strategy: BaseStrategy):
+    def __init__(self, broker: BacktestBroker, strategy: BaseStrategy, verbose: bool = True):
         self.broker = broker
         self.strategy = strategy
+        self.verbose = verbose
 
     def run(self, candles_by_symbol: Dict[str, List[Candle]]) -> List[dict]:
         """
@@ -62,7 +63,8 @@ class BacktestEngine:
         timestamps = sorted(candles_by_timestamp.keys())
 
         # Boucle principale
-        for ts in tqdm(timestamps):
+        iterator = tqdm(timestamps) if self.verbose else timestamps
+        for ts in iterator:
             current_candles = candles_by_timestamp[ts]
             if not current_candles:
                 continue

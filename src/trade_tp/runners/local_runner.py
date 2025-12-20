@@ -24,6 +24,7 @@ def run_local_backtest(
     save_results: bool = True,
     seed: Optional[int] = None,
     run_id: Optional[str] = None,
+    verbose: bool = True,
 ) -> Dict[str, Any]:
     """
     Exécute un backtest localement en utilisant des données distantes.
@@ -64,6 +65,7 @@ def run_local_backtest(
     engine = BacktestEngine(
         broker=broker,
         strategy=strategy,
+        verbose=verbose,
     )
 
     candles_logs = engine.run(candles_by_symbol)
