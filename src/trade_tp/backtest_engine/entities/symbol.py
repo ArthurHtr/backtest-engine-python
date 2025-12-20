@@ -1,6 +1,10 @@
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
 class Symbol:
     """
     Métadonnées décrivant un instrument tradable.
+    Immuable.
 
     Attributes
     - symbol (str): identifiant du symbole, ex. 'BTCUSD' ou 'AAPL'
@@ -8,18 +12,17 @@ class Symbol:
     - quote_asset (str): actif de cotation (ex: 'USD')
     - price_step (float): granularité minimale du prix
     - quantity_step (float): granularité minimale de la quantité
+    - min_quantity (float): quantité minimale autorisée
 
     Ces informations servent notamment à valider/arrondir les ordres selon les
     règles du marché simulé.
     """
-
-    def __init__(self, symbol: str, base_asset: str, quote_asset: str, price_step: float, quantity_step: float, min_quantity: float = 0.0):
-        self.symbol = symbol
-        self.base_asset = base_asset
-        self.quote_asset = quote_asset
-        self.price_step = price_step
-        self.quantity_step = quantity_step
-        self.min_quantity = min_quantity
+    symbol: str
+    base_asset: str
+    quote_asset: str
+    price_step: float
+    quantity_step: float
+    min_quantity: float = 0.0
 
     def round_price(self, price: float) -> float:
         """Arrondit le prix au multiple de price_step le plus proche."""

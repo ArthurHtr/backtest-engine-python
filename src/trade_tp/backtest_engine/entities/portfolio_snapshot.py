@@ -1,8 +1,14 @@
-from trade_tp.backtest_engine.models.positions import Position
+from trade_tp.backtest_engine.entities.position import Position
 
+from dataclasses import dataclass
+from typing import List
+from trade_tp.backtest_engine.entities.position import Position
+
+@dataclass(frozen=True)
 class PortfolioSnapshot:
     """
     Snapshot immuable (vue) de l'état du portefeuille à un instant donné.
+    Immuable.
 
     Champs
     - timestamp (str): horodatage du snapshot
@@ -13,26 +19,14 @@ class PortfolioSnapshot:
     Ce type est utilisé par les stratégies pour décider des actions (OrderIntent)
     et par la sortie d'analyse pour afficher l'état du portefeuille.
     """
-
-    def __init__(self, timestamp: str, cash: float, equity: float, positions: list[Position]):
-        self.timestamp = timestamp
-        self.cash = cash
-        self.equity = equity
-        self.positions = positions
+    timestamp: str
+    cash: float
+    equity: float
+    positions: List[Position]
 
     def summarize_positions(self):
         """
         Retourne un dictionnaire synthétique des positions, indexé par symbole.
-
-        Format de retour
-        {
-            symbol: {
-                "side": "LONG"|"SHORT",
-                "quantity": float,
-                "entry_price": float,
-            },
-            ...
-        }
         """
         return {
             position.symbol: {

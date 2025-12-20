@@ -1,6 +1,11 @@
+from dataclasses import dataclass
+from typing import Optional
+
+@dataclass(frozen=True)
 class Trade:
     """
     Représente un trade effectivement exécuté par le broker.
+    Immuable.
 
     Attributes
     - symbol (str): symbole tradé
@@ -13,11 +18,9 @@ class Trade:
     Note: la création d'un Trade n'implique pas qu'il ait déjà été appliqué au portefeuille;
     c'est un objet de transport utilisé entre le broker et l'état du portefeuille.
     """
-
-    def __init__(self, symbol: str, quantity: float, price: float, fee: float, timestamp: str, trade_id: str = None):
-        self.symbol = symbol
-        self.quantity = quantity
-        self.price = price
-        self.fee = fee
-        self.timestamp = timestamp
-        self.trade_id = trade_id
+    symbol: str
+    quantity: float
+    price: float
+    fee: float
+    timestamp: str
+    trade_id: Optional[str] = None

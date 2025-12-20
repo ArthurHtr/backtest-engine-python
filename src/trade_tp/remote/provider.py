@@ -1,6 +1,6 @@
 from typing import Dict, List
-from trade_tp.backtest_engine.models.candle import Candle
-from trade_tp.backtest_engine.models.symbol import Symbol
+from trade_tp.backtest_engine.entities.candle import Candle
+from trade_tp.backtest_engine.entities.symbol import Symbol
 from trade_tp.remote.client import TradeTpClient
 
 class RemoteDataProvider:

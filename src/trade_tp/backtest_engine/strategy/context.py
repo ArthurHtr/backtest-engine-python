@@ -1,10 +1,9 @@
-from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 
-from trade_tp.backtest_engine.models.candle import Candle
-from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
-from trade_tp.backtest_engine.models.positions import Position
-from trade_tp.backtest_engine.models.enums import PositionSide
+from trade_tp.backtest_engine.entities.candle import Candle
+from trade_tp.backtest_engine.entities.portfolio_snapshot import PortfolioSnapshot
+from trade_tp.backtest_engine.entities.position import Position
+from trade_tp.backtest_engine.entities.enums import PositionSide
 
 
 class StrategyContext:
@@ -81,14 +80,3 @@ class StrategyContext:
         """Return the quantity of the position on the symbol, or 0.0."""
         pos = self.get_position(symbol)
         return pos.quantity if pos else 0.0
-
-
-class BaseStrategy(ABC):
-    """
-    Abstract base class for all strategies.
-    """
-
-    @abstractmethod
-    def on_bar(self, context: StrategyContext):
-        """Called on each new bar (candle) for multiple symbols."""
-        pass

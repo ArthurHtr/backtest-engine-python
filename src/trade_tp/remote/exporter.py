@@ -1,11 +1,11 @@
 from typing import Any, Dict, List, Optional
 from trade_tp.remote.client import TradeTpClient
-from trade_tp.backtest_engine.models.candle import Candle
-from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
-from trade_tp.backtest_engine.models.positions import Position
-from trade_tp.backtest_engine.models.order_intent import OrderIntent
-from trade_tp.backtest_engine.models.enums import Side, PositionSide
-from trade_tp.backtest_engine.models.trade import Trade
+from trade_tp.backtest_engine.entities.candle import Candle
+from trade_tp.backtest_engine.entities.portfolio_snapshot import PortfolioSnapshot
+from trade_tp.backtest_engine.entities.position import Position
+from trade_tp.backtest_engine.entities.order_intent import OrderIntent
+from trade_tp.backtest_engine.entities.enums import Side, PositionSide
+from trade_tp.backtest_engine.entities.trade import Trade
 
 class ResultExporter:
     """Envoie directement les `candles_logs` (brut) vers l'API distante.

@@ -2,10 +2,11 @@ from typing import Dict, List
 from tqdm import tqdm
 from collections import defaultdict
 
-from trade_tp.backtest_engine.models.candle import Candle
-from trade_tp.backtest_engine.models.portfolio_snapshot import PortfolioSnapshot
+from trade_tp.backtest_engine.entities.candle import Candle
+from trade_tp.backtest_engine.entities.portfolio_snapshot import PortfolioSnapshot
 from trade_tp.backtest_engine.broker import BacktestBroker
-from trade_tp.backtest_engine.models.strategy import BaseStrategy, StrategyContext
+from trade_tp.backtest_engine.strategy.base import BaseStrategy
+from trade_tp.backtest_engine.strategy.context import StrategyContext
 
 class BacktestEngine:
     """
@@ -91,4 +92,3 @@ class BacktestEngine:
             })
 
         return candles_logs
-
