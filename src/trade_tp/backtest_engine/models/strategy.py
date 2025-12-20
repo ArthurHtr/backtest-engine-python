@@ -72,6 +72,16 @@ class StrategyContext:
         pos = self.get_position(symbol)
         return pos is not None and pos.side == PositionSide.SHORT
 
+    def get_entry_price(self, symbol: str) -> Optional[float]:
+        """Return the entry price of the position on the symbol, or None."""
+        pos = self.get_position(symbol)
+        return pos.entry_price if pos else None
+
+    def get_quantity(self, symbol: str) -> float:
+        """Return the quantity of the position on the symbol, or 0.0."""
+        pos = self.get_position(symbol)
+        return pos.quantity if pos else 0.0
+
 
 class BaseStrategy(ABC):
     """
