@@ -87,7 +87,8 @@ class ResultExporter:
                 "timestamp": log["timestamp"],
                 "snapshot_after": log["snapshot_after"],
                 "order_intents": log["order_intents"],
-                "execution_details": log["execution_details"]
+                "execution_details": log["execution_details"],
+                "indicators": log.get("indicators", {})
             }
             filtered_logs.append(filtered_log)
 

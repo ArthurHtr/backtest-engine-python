@@ -80,6 +80,9 @@ class BacktestEngine:
 
             order_intents = self.strategy.on_bar(context)
 
+            # Capture recorded indicators
+            indicators = context.recorded_indicators
+
             snapshot_after, execution_details = self.broker.process_bars(current_candles, order_intents)
 
             snapshots.append(snapshot_after)
@@ -91,6 +94,7 @@ class BacktestEngine:
                 "snapshot_after": snapshot_after,
                 "order_intents": order_intents,
                 "execution_details": execution_details,
+                "indicators": indicators, 
             })
 
         return candles_logs

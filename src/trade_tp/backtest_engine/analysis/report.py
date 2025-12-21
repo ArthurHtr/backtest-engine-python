@@ -47,6 +47,9 @@ def export_backtest_analysis(
     # 5. Order Intents CSV
     _write_order_intents_csv(os.path.join(run_dir, "order_intents.csv"), candles_logs, verbose=verbose)
 
+    # 6. Indicators CSV
+    _write_indicators_csv(os.path.join(run_dir, "indicators.csv"), candles_logs, verbose=verbose)
+
 
 
 def _write_summary_file(filepath: str, summary: Optional[Dict[str, Any]], verbose: bool = True) -> None:
@@ -291,3 +294,38 @@ def _write_order_intents_csv(filepath: str, candles_logs: List[Dict[str, Any]], 
         writer.writeheader()
         for data in intents_data:
             writer.writerow(data)
+def _write_indicators_csv(filepath: str, candles_logs: List[Dict[str, Any]], verbose: bool = True) -> None:
+    if not verbose:
+        return
+    
+    # Collect all unique indicator names
+    indicator_names = set()
+    for log in candles_logs:
+        inds = log.get("indicators", {})
+        for name in inds.keys():
+            indicator_names.add(name)
+            
+    if not indicator_names:
+        return
+
+    sorted_names = sorted(list(indicator_names))
+    
+    with open(filepath, "w", newline='') as csvfile:
+        fieldnames = ["timestamp"] + sorted_names
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for log in candles_logs:
+            row = {"timestamp": log.get("timestamp")}
+            inds = log.get("indicators", {})
+            
+            has_data = False
+            for name in sorted_names:
+                if name in inds:
+                    row[name] = inds[name].get("value")
+                    has_data = True
+                else:
+                    row[name] = ""
+            
+            if has_data:
+                writer.writerow(row)

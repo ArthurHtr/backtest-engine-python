@@ -25,6 +25,31 @@ class StrategyContext:
 
         # small cache for per-context computed indicators for exemple
         self._cache = {}
+        
+        # Storage for indicators recorded during this step
+        self._recorded_indicators = {}
+
+    def record(self, name: str, value: float, type: str = 'line', overlay: bool = True, color: str = None):
+        """
+        Record an indicator value for the current step.
+        
+        Args:
+            name: Name of the indicator (e.g. "SMA_20")
+            value: The value to record
+            type: Chart type ('line', 'histogram', etc.) - currently mainly 'line' is supported
+            overlay: Whether to plot on the main price chart (True) or a separate pane (False). Defaults to True.
+            color: Optional hex color code (e.g. "#FF0000"). If None, a color will be auto-assigned by the viewer.
+        """
+        self._recorded_indicators[name] = {
+            "value": value,
+            "type": type,
+            "overlay": overlay,
+            "color": color
+        }
+
+    @property
+    def recorded_indicators(self) -> Dict:
+        return self._recorded_indicators
 
     def current_timestamp(self) -> Optional[str]:
         """Return the timestamp of the current candles (assumes all current candles share the same ts)."""
