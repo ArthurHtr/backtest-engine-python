@@ -80,8 +80,19 @@ class ResultExporter:
     def export(self, run_id: Optional[str], params: Dict[str, Any], candles_logs: List[dict]) -> Dict[str, Any]:
         """Envoie le payload complet contenant `candles_logs`.
         """
+        # Filter logs to reduce size: remove candles and snapshot_before
+        filtered_logs = []
+        for log in candles_logs:
+            filtered_log = {
+                "timestamp": log["timestamp"],
+                "snapshot_after": log["snapshot_after"],
+                "order_intents": log["order_intents"],
+                "execution_details": log["execution_details"]
+            }
+            filtered_logs.append(filtered_log)
+
         # Serialize candles_logs to ensure all custom objects are converted to dicts
-        serialized_logs = self._serialize(candles_logs)
+        serialized_logs = self._serialize(filtered_logs)
 
         payload = {
             "run_id": run_id,
