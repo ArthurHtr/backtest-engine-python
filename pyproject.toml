@@ -1,38 +1,26 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "trade_tp"
+name = "trade-tp"
 version = "0.1.0"
-description = "Lightweight backtest engine and broker simulator for trading strategies"
+description = "A Python backtesting engine for trading strategies"
 readme = "README.md"
-requires-python = ">=3.10"
-license = { text = "MIT" }
+requires-python = ">=3.9"
+license = {file = "LICENSE"}
 authors = [
-  { name = "Arthur Hottier" }
+  {name = "Arthur Hottier"} 
 ]
-keywords = ["backtest", "trading", "finance", "algorithmic-trading"]
 classifiers = [
-  "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
-  "Topic :: Office/Business :: Financial"
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
 ]
 dependencies = [
-  "tqdm>=4.0",
-  "requests>=2.0"
+    "requests",
+    "tqdm",
 ]
 
-[project.optional-dependencies]
-dev = ["pytest>=7.0", "black", "isort"]
-
 [project.urls]
-Homepage = "https://github.com/ArthurHtr/backtest-engine-python"
-Source = "https://github.com/ArthurHtr/backtest-engine-python"
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
+"Homepage" = "https://github.com/arthur-hottier/trading-plateform"

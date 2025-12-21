@@ -1,7 +1,2 @@
-tqdm>=4.0
-requests>=2.0
-
-[dev]
-pytest>=7.0
-black
-isort
+requests
+tqdm
