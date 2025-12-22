@@ -8,7 +8,7 @@ def run_remote_backtest(
     run_id: str,
     api_key: str,
     strategy: BaseStrategy,
-    base_url: str = "http://192.168.1.66:3000/api",
+    base_url: str,
     save_local: bool = False,
     export_to_server: bool = True,
     verbose: bool = True

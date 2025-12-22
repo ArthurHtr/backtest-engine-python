@@ -25,6 +25,9 @@ def run_local_backtest(
     seed: Optional[int] = None,
     run_id: Optional[str] = None,
     verbose: bool = True,
+    # Optional pre-fetched data to avoid API calls
+    candles_by_symbol: Optional[Dict[str, List[Any]]] = None,
+    symbols_map: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Exécute un backtest localement en utilisant des données distantes.
@@ -33,27 +36,30 @@ def run_local_backtest(
     if run_id is None:
         run_id = uuid.uuid4().hex
 
-    if not api_key:
-        raise ValueError("api_key is required for remote backtest. Local simulation is not supported.")
+    # If data is not provided, we need api_key to fetch it
+    if (candles_by_symbol is None or symbols_map is None) and not api_key:
+        raise ValueError("api_key is required for remote backtest if data is not provided.")
 
-    client = TradeTpClient(
-        base_url=base_url,
-        api_key=api_key,
-    )
+    if candles_by_symbol is None or symbols_map is None:
+        client = TradeTpClient(
+            base_url=base_url,
+            api_key=api_key,
+        )
+        # Use remote data provider
+        data_provider = RemoteDataProvider(client)
 
-    # Use remote data provider
-    data_provider = RemoteDataProvider(client)
+        if symbols_map is None:
+            # Fetch symbol info
+            symbol_objects = data_provider.get_symbols(symbols)
+            symbols_map = {s.symbol: s for s in symbol_objects}
 
-    # Fetch symbol info
-    symbol_objects = data_provider.get_symbols(symbols)
-    symbols_map = {s.symbol: s for s in symbol_objects}
-
-    candles_by_symbol = data_provider.get_multiple_candles(
-        symbols=symbols,
-        start=start,
-        end=end,
-        timeframe=timeframe,
-    )
+        if candles_by_symbol is None:
+            candles_by_symbol = data_provider.get_multiple_candles(
+                symbols=symbols,
+                start=start,
+                end=end,
+                timeframe=timeframe,
+            )
 
     broker = BacktestBroker(
         initial_cash=initial_cash,
