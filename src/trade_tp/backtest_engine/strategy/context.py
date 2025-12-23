@@ -29,7 +29,7 @@ class StrategyContext:
         # Storage for indicators recorded during this step
         self._recorded_indicators = {}
 
-    def record(self, name: str, value: float, type: str = 'line', overlay: bool = True, color: str = None):
+    def record(self, name: str, value: float, type: str = 'line', overlay: bool = True, color: str = None, symbol: str = None):
         """
         Record an indicator value for the current step.
         
@@ -39,12 +39,18 @@ class StrategyContext:
             type: Chart type ('line', 'histogram', etc.) - currently mainly 'line' is supported
             overlay: Whether to plot on the main price chart (True) or a separate pane (False). Defaults to True.
             color: Optional hex color code (e.g. "#FF0000"). If None, a color will be auto-assigned by the viewer.
+            symbol: Optional symbol to associate this indicator with. If provided, the name will be prefixed with "{symbol}:".
         """
-        self._recorded_indicators[name] = {
+        final_name = name
+        if symbol:
+            final_name = f"{symbol}:{name}"
+
+        self._recorded_indicators[final_name] = {
             "value": value,
             "type": type,
             "overlay": overlay,
-            "color": color
+            "color": color,
+            "symbol": symbol
         }
 
     @property
